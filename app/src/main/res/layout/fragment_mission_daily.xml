@@ -1,0 +1,296 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/daily_mission_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#F8F5FF"
+    android:fillViewport="true"
+    android:paddingTop="8dp"
+    android:paddingBottom="16dp">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingStart="2dp"
+        android:paddingEnd="2dp">
+
+        <!-- 오늘 출석 미션 -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/card_daily_attendance"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:clickable="true"
+            android:focusable="true"
+            android:foreground="?attr/selectableItemBackground"
+            app:cardBackgroundColor="#FFFFFF"
+            app:cardCornerRadius="24dp"
+            app:cardElevation="3dp"
+            app:cardUseCompatPadding="true"
+            app:strokeColor="#EFE7FF"
+            app:strokeWidth="1dp"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent">
+
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:padding="18dp">
+
+                <TextView
+                    android:id="@+id/tv_daily_type_label"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:letterSpacing="0.06"
+                    android:text="DAILY QUEST"
+                    android:textColor="#8E6AD8"
+                    android:textSize="10sp"
+                    android:textStyle="bold"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintStart_toStartOf="parent" />
+
+                <ImageView
+                    android:id="@+id/iv_daily_icon"
+                    android:layout_width="46dp"
+                    android:layout_height="46dp"
+                    android:layout_marginTop="14dp"
+                    android:background="@drawable/bg_circle_lavender"
+                    android:contentDescription="일일 출석 미션"
+                    android:padding="10dp"
+                    android:src="@drawable/ic_launcher_background"
+                    app:layout_constraintTop_toBottomOf="@id/tv_daily_type_label"
+                    app:layout_constraintStart_toStartOf="parent" />
+
+                <TextView
+                    android:id="@+id/tv_daily_status"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_lavender_chip"
+                    android:paddingStart="12dp"
+                    android:paddingTop="6dp"
+                    android:paddingEnd="12dp"
+                    android:paddingBottom="6dp"
+                    android:text="0 / 1"
+                    android:textColor="#6F45C5"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    app:layout_constraintTop_toTopOf="@id/iv_daily_icon"
+                    app:layout_constraintEnd_toEndOf="parent" />
+
+                <TextView
+                    android:id="@+id/tv_daily_title"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="14dp"
+                    android:layout_marginEnd="10dp"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:text="오늘 출석하기"
+                    android:textColor="#222222"
+                    android:textSize="17sp"
+                    android:textStyle="bold"
+                    app:layout_constraintTop_toTopOf="@id/iv_daily_icon"
+                    app:layout_constraintStart_toEndOf="@id/iv_daily_icon"
+                    app:layout_constraintEnd_toStartOf="@id/tv_daily_status" />
+
+                <TextView
+                    android:id="@+id/tv_daily_desc"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="14dp"
+                    android:layout_marginTop="5dp"
+                    android:text="오늘 출석을 완료하면 경험치를 받을 수 있어요."
+                    android:textColor="#777777"
+                    android:textSize="12sp"
+                    app:layout_constraintTop_toBottomOf="@id/tv_daily_title"
+                    app:layout_constraintStart_toEndOf="@id/iv_daily_icon"
+                    app:layout_constraintEnd_toEndOf="parent" />
+
+                <TextView
+                    android:id="@+id/tv_daily_tag"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:background="@drawable/bg_friend_favorite_chip"
+                    android:paddingStart="11dp"
+                    android:paddingTop="5dp"
+                    android:paddingEnd="11dp"
+                    android:paddingBottom="5dp"
+                    android:text="일일 미션"
+                    android:textColor="#6F45C5"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    app:layout_constraintTop_toBottomOf="@id/iv_daily_icon"
+                    app:layout_constraintStart_toStartOf="parent" />
+
+                <TextView
+                    android:id="@+id/tv_daily_reward"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:background="@drawable/bg_reward_chip"
+                    android:paddingStart="11dp"
+                    android:paddingTop="5dp"
+                    android:paddingEnd="11dp"
+                    android:paddingBottom="5dp"
+                    android:text="EXP +10"
+                    android:textColor="#2E7D32"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    app:layout_constraintTop_toTopOf="@id/tv_daily_tag"
+                    app:layout_constraintBottom_toBottomOf="@id/tv_daily_tag"
+                    app:layout_constraintStart_toEndOf="@id/tv_daily_tag" />
+
+                <TextView
+                    android:id="@+id/tv_daily_hint"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:background="@drawable/bg_summary_notice"
+                    android:paddingStart="14dp"
+                    android:paddingTop="11dp"
+                    android:paddingEnd="14dp"
+                    android:paddingBottom="11dp"
+                    android:text="오늘 출석 완료 시 EXP +10"
+                    android:textColor="#666666"
+                    android:textSize="12sp"
+                    app:layout_constraintTop_toBottomOf="@id/tv_daily_tag"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent" />
+
+            </androidx.constraintlayout.widget.ConstraintLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- 테스트 미션: 유지 -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/card_test_exp"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:foreground="?attr/selectableItemBackground"
+            app:cardBackgroundColor="#FFFDF8"
+            app:cardCornerRadius="24dp"
+            app:cardElevation="3dp"
+            app:cardUseCompatPadding="true"
+            app:strokeColor="#FFD7A8"
+            app:strokeWidth="1dp"
+            app:layout_constraintTop_toBottomOf="@id/card_daily_attendance"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent">
+
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:padding="18dp">
+
+                <TextView
+                    android:id="@+id/tv_test_type_label"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:letterSpacing="0.06"
+                    android:text="DEBUG QUEST"
+                    android:textColor="#D97706"
+                    android:textSize="10sp"
+                    android:textStyle="bold"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintStart_toStartOf="parent" />
+
+                <ImageView
+                    android:id="@+id/iv_test_icon"
+                    android:layout_width="46dp"
+                    android:layout_height="46dp"
+                    android:layout_marginTop="14dp"
+                    android:background="@drawable/bg_test_icon_circle"
+                    android:contentDescription="테스트 경험치 미션"
+                    android:padding="10dp"
+                    android:src="@drawable/ic_mission_gift"
+                    app:layout_constraintTop_toBottomOf="@id/tv_test_type_label"
+                    app:layout_constraintStart_toStartOf="parent" />
+
+                <TextView
+                    android:id="@+id/tv_test_status"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_test_status"
+                    android:paddingStart="12dp"
+                    android:paddingTop="6dp"
+                    android:paddingEnd="12dp"
+                    android:paddingBottom="6dp"
+                    android:text="반복 가능"
+                    android:textColor="#D97706"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    app:layout_constraintTop_toTopOf="@id/iv_test_icon"
+                    app:layout_constraintEnd_toEndOf="parent" />
+
+                <TextView
+                    android:id="@+id/tv_test_title"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="14dp"
+                    android:layout_marginEnd="10dp"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:text="레벨 / 뱃지 테스트 미션"
+                    android:textColor="#222222"
+                    android:textSize="17sp"
+                    android:textStyle="bold"
+                    app:layout_constraintTop_toTopOf="@id/iv_test_icon"
+                    app:layout_constraintStart_toEndOf="@id/iv_test_icon"
+                    app:layout_constraintEnd_toStartOf="@id/tv_test_status" />
+
+                <TextView
+                    android:id="@+id/tv_test_desc"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="14dp"
+                    android:layout_marginTop="5dp"
+                    android:text="클릭할 때마다 경험치를 지급하는 테스트 전용 미션입니다."
+                    android:textColor="#777777"
+                    android:textSize="12sp"
+                    app:layout_constraintTop_toBottomOf="@id/tv_test_title"
+                    app:layout_constraintStart_toEndOf="@id/iv_test_icon"
+                    app:layout_constraintEnd_toEndOf="parent" />
+
+                <TextView
+                    android:id="@+id/tv_test_reward"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:background="@drawable/bg_reward_chip"
+                    android:paddingStart="11dp"
+                    android:paddingTop="5dp"
+                    android:paddingEnd="11dp"
+                    android:paddingBottom="5dp"
+                    android:text="EXP +100"
+                    android:textColor="#2E7D32"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    app:layout_constraintTop_toBottomOf="@id/iv_test_icon"
+                    app:layout_constraintStart_toStartOf="parent" />
+
+                <TextView
+                    android:id="@+id/tv_test_hint"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:background="@drawable/bg_test_notice"
+                    android:paddingStart="14dp"
+                    android:paddingTop="11dp"
+                    android:paddingEnd="14dp"
+                    android:paddingBottom="11dp"
+                    android:text="개발 중 레벨, EXP, 뱃지 변화를 확인하기 위한 테스트 카드예요."
+                    android:textColor="#8A5A00"
+                    android:textSize="12sp"
+                    app:layout_constraintTop_toBottomOf="@id/tv_test_reward"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent" />
+
+            </androidx.constraintlayout.widget.ConstraintLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</androidx.core.widget.NestedScrollView>

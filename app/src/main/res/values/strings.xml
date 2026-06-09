@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">Idol Project</string>
+    <string name="profile_image">프로필 이미지</string>
+    <string name="edit_profile">프로필 편집</string>
+    <string name="level_badge">레벨 뱃지</string>
+    <string name="chat_add">파일/사진 추가</string>
+    <string name="chat_hint_message">메시지를 입력하세요</string>
+    <string name="chat_send">전송</string>
+</resources>

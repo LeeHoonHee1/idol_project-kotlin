@@ -1,0 +1,548 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/layout_ranking_user_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#F8F5FF"
+    android:fillViewport="true"
+    android:paddingTop="8dp"
+    android:paddingBottom="16dp">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingStart="2dp"
+        android:paddingEnd="2dp">
+
+        <!-- 내 랭킹 카드 -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/card_my_rank"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            app:cardBackgroundColor="#FFFFFF"
+            app:cardCornerRadius="24dp"
+            app:cardElevation="3dp"
+            app:cardUseCompatPadding="true"
+            app:strokeColor="#EFE7FF"
+            app:strokeWidth="1dp"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent">
+
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:padding="18dp">
+
+                <TextView
+                    android:id="@+id/tv_my_rank_label"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:letterSpacing="0.06"
+                    android:text="MY RANK"
+                    android:textColor="#8E6AD8"
+                    android:textSize="10sp"
+                    android:textStyle="bold"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintStart_toStartOf="parent" />
+
+                <ImageView
+                    android:id="@+id/img_my_profile"
+                    android:layout_width="58dp"
+                    android:layout_height="58dp"
+                    android:layout_marginTop="14dp"
+                    android:background="@drawable/bg_circle_gray"
+                    android:contentDescription="@string/app_name"
+                    android:scaleType="centerCrop"
+                    android:src="@mipmap/ic_launcher"
+                    app:layout_constraintTop_toBottomOf="@id/tv_my_rank_label"
+                    app:layout_constraintStart_toStartOf="parent" />
+
+                <TextView
+                    android:id="@+id/tv_my_rank"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_lavender_chip"
+                    android:paddingStart="14dp"
+                    android:paddingTop="7dp"
+                    android:paddingEnd="14dp"
+                    android:paddingBottom="7dp"
+                    android:text="3위"
+                    android:textColor="#6F45C5"
+                    android:textSize="15sp"
+                    android:textStyle="bold"
+                    app:layout_constraintTop_toTopOf="@id/img_my_profile"
+                    app:layout_constraintEnd_toEndOf="parent" />
+
+                <TextView
+                    android:id="@+id/tv_my_nickname"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="14dp"
+                    android:layout_marginEnd="10dp"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:text="내 닉네임"
+                    android:textColor="#222222"
+                    android:textSize="17sp"
+                    android:textStyle="bold"
+                    app:layout_constraintTop_toTopOf="@id/img_my_profile"
+                    app:layout_constraintStart_toEndOf="@id/img_my_profile"
+                    app:layout_constraintEnd_toStartOf="@id/tv_my_rank" />
+
+                <TextView
+                    android:id="@+id/tv_my_level_exp"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="14dp"
+                    android:layout_marginTop="4dp"
+                    android:layout_marginEnd="10dp"
+                    android:text="Lv.10 · EXP 1234"
+                    android:textColor="#777777"
+                    android:textSize="13sp"
+                    app:layout_constraintTop_toBottomOf="@id/tv_my_nickname"
+                    app:layout_constraintStart_toEndOf="@id/img_my_profile"
+                    app:layout_constraintEnd_toStartOf="@id/tv_my_rank" />
+
+                <ImageView
+                    android:id="@+id/img_my_badge"
+                    android:layout_width="34dp"
+                    android:layout_height="34dp"
+                    android:layout_marginStart="14dp"
+                    android:layout_marginTop="8dp"
+                    android:contentDescription="내 배지"
+                    android:src="@drawable/ic_badge_bronze"
+                    app:layout_constraintTop_toBottomOf="@id/tv_my_level_exp"
+                    app:layout_constraintStart_toEndOf="@id/img_my_profile" />
+
+                <TextView
+                    android:id="@+id/tv_my_rank_hint"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:background="@drawable/bg_summary_notice"
+                    android:paddingStart="12dp"
+                    android:paddingTop="8dp"
+                    android:paddingEnd="12dp"
+                    android:paddingBottom="8dp"
+                    android:text="미션으로 EXP를 모으면 순위가 올라가요"
+                    android:textColor="#666666"
+                    android:textSize="12sp"
+                    app:layout_constraintTop_toTopOf="@id/img_my_badge"
+                    app:layout_constraintBottom_toBottomOf="@id/img_my_badge"
+                    app:layout_constraintStart_toEndOf="@id/img_my_badge"
+                    app:layout_constraintEnd_toEndOf="parent" />
+
+            </androidx.constraintlayout.widget.ConstraintLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- TOP 3 제목 -->
+        <TextView
+            android:id="@+id/tv_top3_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="18dp"
+            android:text="TOP 3 팬 랭커"
+            android:textColor="#222222"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            app:layout_constraintTop_toBottomOf="@id/card_my_rank"
+            app:layout_constraintStart_toStartOf="parent" />
+
+        <TextView
+            android:id="@+id/tv_top3_subtitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="레벨과 EXP 기준 상위 팬들이에요"
+            android:textColor="#888888"
+            android:textSize="12sp"
+            app:layout_constraintTop_toBottomOf="@id/tv_top3_title"
+            app:layout_constraintStart_toStartOf="@id/tv_top3_title" />
+
+        <!-- TOP 3 랭커 영역: 1등 큰 카드 + 2/3등 작은 카드 -->
+        <LinearLayout
+            android:id="@+id/layout_top3_podium"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:orientation="vertical"
+            app:layout_constraintTop_toBottomOf="@id/tv_top3_subtitle"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent">
+
+            <!-- 1등 큰 카드 -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/layout_rank1"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:cardBackgroundColor="#FFFDF4"
+                app:cardCornerRadius="24dp"
+                app:cardElevation="4dp"
+                app:cardUseCompatPadding="true"
+                app:strokeColor="#F6D77A"
+                app:strokeWidth="1dp">
+
+                <androidx.constraintlayout.widget.ConstraintLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:minHeight="126dp"
+                    android:padding="16dp">
+
+                    <TextView
+                        android:id="@+id/tv_rank1_badge"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:background="@drawable/bg_reward_chip"
+                        android:paddingStart="12dp"
+                        android:paddingTop="5dp"
+                        android:paddingEnd="12dp"
+                        android:paddingBottom="5dp"
+                        android:text="1위"
+                        android:textColor="#8A5A00"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        app:layout_constraintTop_toTopOf="parent"
+                        app:layout_constraintStart_toStartOf="parent" />
+
+                    <ImageView
+                        android:id="@+id/img_rank1_trophy"
+                        android:layout_width="34dp"
+                        android:layout_height="34dp"
+                        android:adjustViewBounds="true"
+                        android:contentDescription="1등 트로피"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/ic_trophy_gold"
+                        app:layout_constraintTop_toTopOf="@id/tv_rank1_badge"
+                        app:layout_constraintBottom_toBottomOf="@id/tv_rank1_badge"
+                        app:layout_constraintEnd_toEndOf="parent" />
+
+                    <ImageView
+                        android:id="@+id/img_rank1_profile"
+                        android:layout_width="66dp"
+                        android:layout_height="66dp"
+                        android:layout_marginTop="14dp"
+                        android:background="@drawable/bg_circle_gray"
+                        android:scaleType="centerCrop"
+                        android:src="@mipmap/ic_launcher"
+                        app:layout_constraintTop_toBottomOf="@id/tv_rank1_badge"
+                        app:layout_constraintStart_toStartOf="parent" />
+
+                    <ImageView
+                        android:id="@+id/img_rank1_user_badge"
+                        android:layout_width="30dp"
+                        android:layout_height="30dp"
+                        android:layout_marginStart="14dp"
+                        android:contentDescription="1등 배지"
+                        android:src="@drawable/ic_badge_gold"
+                        app:layout_constraintTop_toTopOf="@id/img_rank1_profile"
+                        app:layout_constraintStart_toEndOf="@id/img_rank1_profile" />
+
+                    <TextView
+                        android:id="@+id/tv_rank1_nickname"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="10dp"
+                        android:layout_marginEnd="8dp"
+                        android:ellipsize="end"
+                        android:maxLines="1"
+                        android:text="유저1"
+                        android:textColor="#222222"
+                        android:textSize="18sp"
+                        android:textStyle="bold"
+                        app:layout_constraintTop_toTopOf="@id/img_rank1_user_badge"
+                        app:layout_constraintStart_toEndOf="@id/img_rank1_user_badge"
+                        app:layout_constraintEnd_toEndOf="parent" />
+
+                    <TextView
+                        android:id="@+id/tv_rank1_level"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="10dp"
+                        android:layout_marginTop="5dp"
+                        android:layout_marginEnd="8dp"
+                        android:ellipsize="end"
+                        android:maxLines="1"
+                        android:text="Lv.12 · EXP 50"
+                        android:textColor="#777777"
+                        android:textSize="13sp"
+                        app:layout_constraintTop_toBottomOf="@id/tv_rank1_nickname"
+                        app:layout_constraintStart_toEndOf="@id/img_rank1_user_badge"
+                        app:layout_constraintEnd_toEndOf="parent" />
+
+                    <TextView
+                        android:id="@+id/tv_rank1_hint"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:background="@drawable/bg_summary_notice"
+                        android:paddingStart="12dp"
+                        android:paddingTop="8dp"
+                        android:paddingEnd="12dp"
+                        android:paddingBottom="8dp"
+                        android:text="현재 팬 활동 랭킹 1위예요"
+                        android:textColor="#666666"
+                        android:textSize="12sp"
+                        app:layout_constraintTop_toBottomOf="@id/img_rank1_profile"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintEnd_toEndOf="parent" />
+
+                </androidx.constraintlayout.widget.ConstraintLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+
+            <!-- 2등 / 3등 카드 Row -->
+            <LinearLayout
+                android:id="@+id/layout_rank23_row"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:baselineAligned="false"
+                android:orientation="horizontal"
+                android:weightSum="2">
+
+                <!-- 2등 카드 -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/layout_rank2"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="5dp"
+                    android:layout_weight="1"
+                    app:cardBackgroundColor="#FFFFFF"
+                    app:cardCornerRadius="22dp"
+                    app:cardElevation="3dp"
+                    app:cardUseCompatPadding="true"
+                    app:strokeColor="#E5E5E5"
+                    app:strokeWidth="1dp">
+
+                    <androidx.constraintlayout.widget.ConstraintLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:minHeight="118dp"
+                        android:padding="12dp">
+
+                        <TextView
+                            android:id="@+id/tv_rank2_badge"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:background="@drawable/bg_friend_favorite_chip"
+                            android:paddingStart="10dp"
+                            android:paddingTop="4dp"
+                            android:paddingEnd="10dp"
+                            android:paddingBottom="4dp"
+                            android:text="2위"
+                            android:textColor="#666666"
+                            android:textSize="11sp"
+                            android:textStyle="bold"
+                            app:layout_constraintTop_toTopOf="parent"
+                            app:layout_constraintStart_toStartOf="parent" />
+
+                        <ImageView
+                            android:id="@+id/img_rank2_trophy"
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:adjustViewBounds="true"
+                            android:contentDescription="2등 트로피"
+                            android:scaleType="fitCenter"
+                            android:src="@drawable/ic_trophy_silver"
+                            app:layout_constraintTop_toTopOf="@id/tv_rank2_badge"
+                            app:layout_constraintBottom_toBottomOf="@id/tv_rank2_badge"
+                            app:layout_constraintEnd_toEndOf="parent" />
+
+                        <ImageView
+                            android:id="@+id/img_rank2_profile"
+                            android:layout_width="44dp"
+                            android:layout_height="44dp"
+                            android:layout_marginTop="12dp"
+                            android:background="@drawable/bg_circle_gray"
+                            android:scaleType="centerCrop"
+                            android:src="@mipmap/ic_launcher"
+                            app:layout_constraintTop_toBottomOf="@id/tv_rank2_badge"
+                            app:layout_constraintStart_toStartOf="parent" />
+
+                        <ImageView
+                            android:id="@+id/img_rank2_user_badge"
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:layout_marginStart="10dp"
+                            android:contentDescription="2등 배지"
+                            android:src="@drawable/ic_badge_silver"
+                            app:layout_constraintTop_toTopOf="@id/img_rank2_profile"
+                            app:layout_constraintStart_toEndOf="@id/img_rank2_profile" />
+
+                        <TextView
+                            android:id="@+id/tv_rank2_nickname"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="7dp"
+                            android:ellipsize="end"
+                            android:maxLines="1"
+                            android:text="유저2"
+                            android:textColor="#222222"
+                            android:textSize="13sp"
+                            android:textStyle="bold"
+                            app:layout_constraintTop_toTopOf="@id/img_rank2_user_badge"
+                            app:layout_constraintStart_toEndOf="@id/img_rank2_user_badge"
+                            app:layout_constraintEnd_toEndOf="parent" />
+
+                        <TextView
+                            android:id="@+id/tv_rank2_level"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="7dp"
+                            android:layout_marginTop="3dp"
+                            android:ellipsize="end"
+                            android:maxLines="1"
+                            android:text="Lv.9 · EXP 80"
+                            android:textColor="#777777"
+                            android:textSize="11sp"
+                            app:layout_constraintTop_toBottomOf="@id/tv_rank2_nickname"
+                            app:layout_constraintStart_toEndOf="@id/img_rank2_user_badge"
+                            app:layout_constraintEnd_toEndOf="parent" />
+
+                    </androidx.constraintlayout.widget.ConstraintLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+
+                <!-- 3등 카드 -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/layout_rank3"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="5dp"
+                    android:layout_weight="1"
+                    app:cardBackgroundColor="#FFFFFF"
+                    app:cardCornerRadius="22dp"
+                    app:cardElevation="3dp"
+                    app:cardUseCompatPadding="true"
+                    app:strokeColor="#F2D8CF"
+                    app:strokeWidth="1dp">
+
+                    <androidx.constraintlayout.widget.ConstraintLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:minHeight="118dp"
+                        android:padding="12dp">
+
+                        <TextView
+                            android:id="@+id/tv_rank3_badge"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:background="@drawable/bg_friend_favorite_chip"
+                            android:paddingStart="10dp"
+                            android:paddingTop="4dp"
+                            android:paddingEnd="10dp"
+                            android:paddingBottom="4dp"
+                            android:text="3위"
+                            android:textColor="#8A5A00"
+                            android:textSize="11sp"
+                            android:textStyle="bold"
+                            app:layout_constraintTop_toTopOf="parent"
+                            app:layout_constraintStart_toStartOf="parent" />
+
+                        <ImageView
+                            android:id="@+id/img_rank3_trophy"
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:adjustViewBounds="true"
+                            android:contentDescription="3등 트로피"
+                            android:scaleType="fitCenter"
+                            android:src="@drawable/ic_trophy_bronze"
+                            app:layout_constraintTop_toTopOf="@id/tv_rank3_badge"
+                            app:layout_constraintBottom_toBottomOf="@id/tv_rank3_badge"
+                            app:layout_constraintEnd_toEndOf="parent" />
+
+                        <ImageView
+                            android:id="@+id/img_rank3_profile"
+                            android:layout_width="44dp"
+                            android:layout_height="44dp"
+                            android:layout_marginTop="12dp"
+                            android:background="@drawable/bg_circle_gray"
+                            android:scaleType="centerCrop"
+                            android:src="@mipmap/ic_launcher"
+                            app:layout_constraintTop_toBottomOf="@id/tv_rank3_badge"
+                            app:layout_constraintStart_toStartOf="parent" />
+
+                        <ImageView
+                            android:id="@+id/img_rank3_user_badge"
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:layout_marginStart="10dp"
+                            android:contentDescription="3등 배지"
+                            android:src="@drawable/ic_badge_bronze"
+                            app:layout_constraintTop_toTopOf="@id/img_rank3_profile"
+                            app:layout_constraintStart_toEndOf="@id/img_rank3_profile" />
+
+                        <TextView
+                            android:id="@+id/tv_rank3_nickname"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="7dp"
+                            android:ellipsize="end"
+                            android:maxLines="1"
+                            android:text="유저3"
+                            android:textColor="#222222"
+                            android:textSize="13sp"
+                            android:textStyle="bold"
+                            app:layout_constraintTop_toTopOf="@id/img_rank3_user_badge"
+                            app:layout_constraintStart_toEndOf="@id/img_rank3_user_badge"
+                            app:layout_constraintEnd_toEndOf="parent" />
+
+                        <TextView
+                            android:id="@+id/tv_rank3_level"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="7dp"
+                            android:layout_marginTop="3dp"
+                            android:ellipsize="end"
+                            android:maxLines="1"
+                            android:text="Lv.8 · EXP 60"
+                            android:textColor="#777777"
+                            android:textSize="11sp"
+                            app:layout_constraintTop_toBottomOf="@id/tv_rank3_nickname"
+                            app:layout_constraintStart_toEndOf="@id/img_rank3_user_badge"
+                            app:layout_constraintEnd_toEndOf="parent" />
+
+                    </androidx.constraintlayout.widget.ConstraintLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+        <!-- 전체 랭킹 제목 -->
+        <TextView
+            android:id="@+id/tv_user_rank_list_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="18dp"
+            android:text="전체 팬 랭킹"
+            android:textColor="#222222"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            app:layout_constraintTop_toBottomOf="@id/layout_top3_podium"
+            app:layout_constraintStart_toStartOf="parent" />
+
+        <TextView
+            android:id="@+id/tv_user_rank_list_subtitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="4위부터 전체 랭킹을 확인해요"
+            android:textColor="#888888"
+            android:textSize="12sp"
+            app:layout_constraintTop_toBottomOf="@id/tv_user_rank_list_title"
+            app:layout_constraintStart_toStartOf="@id/tv_user_rank_list_title" />
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/recycler_user_ranking"
+            android:layout_width="0dp"
+            android:layout_height="420dp"
+            android:layout_marginTop="12dp"
+            android:clipToPadding="false"
+            android:paddingBottom="16dp"
+            app:layout_constraintTop_toBottomOf="@id/tv_user_rank_list_subtitle"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</androidx.core.widget.NestedScrollView>

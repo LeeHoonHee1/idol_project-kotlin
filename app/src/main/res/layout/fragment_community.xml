@@ -1,0 +1,186 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/layout_community_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#F8F5FF"
+    android:paddingStart="16dp"
+    android:paddingTop="18dp"
+    android:paddingEnd="16dp"
+    android:paddingBottom="16dp">
+
+    <!-- 작은 제목 영역 -->
+    <LinearLayout
+        android:id="@+id/layout_community_title_bar"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingTop="4dp"
+        android:paddingBottom="8dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <TextView
+            android:id="@+id/tvCommunityTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="커뮤니티"
+            android:textColor="#222222"
+            android:textSize="22sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tvCommunityDesc"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="3dp"
+            android:text="최애 그룹 팬톡방에서 실시간으로 대화해요"
+            android:textColor="#777777"
+            android:textSize="13sp" />
+    </LinearLayout>
+
+
+    <!-- 내 최애 팬톡방 카드 -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/cardFavoriteChatRoom"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="14dp"
+        app:cardBackgroundColor="#FFFFFF"
+        app:cardCornerRadius="24dp"
+        app:cardElevation="3dp"
+        app:cardUseCompatPadding="true"
+        app:strokeColor="#EFE7FF"
+        app:strokeWidth="1dp"
+        app:layout_constraintTop_toBottomOf="@id/layout_community_title_bar"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:minHeight="118dp"
+            android:padding="18dp">
+
+            <TextView
+                android:id="@+id/tv_fan_chat_label"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:letterSpacing="0.06"
+                android:text="FAVORITE FAN TALK"
+                android:textColor="#8E6AD8"
+                android:textSize="10sp"
+                android:textStyle="bold"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintStart_toStartOf="parent" />
+
+            <ImageView
+                android:id="@+id/ivGroupChatIcon"
+                android:layout_width="56dp"
+                android:layout_height="56dp"
+                android:layout_marginTop="14dp"
+                android:background="@drawable/bg_circle_lavender"
+                android:padding="11dp"
+                android:scaleType="centerCrop"
+                android:src="@drawable/person_24dp"
+                app:layout_constraintTop_toBottomOf="@id/tv_fan_chat_label"
+                app:layout_constraintStart_toStartOf="parent" />
+
+            <TextView
+                android:id="@+id/tvFavoriteGroupName"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="14dp"
+                android:layout_marginEnd="12dp"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:text="IVE 팬톡방"
+                android:textColor="#222222"
+                android:textSize="17sp"
+                android:textStyle="bold"
+                app:layout_constraintTop_toTopOf="@id/ivGroupChatIcon"
+                app:layout_constraintStart_toEndOf="@id/ivGroupChatIcon"
+                app:layout_constraintEnd_toStartOf="@id/ivGoChat" />
+
+            <TextView
+                android:id="@+id/tvFavoriteGroupSub"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="14dp"
+                android:layout_marginTop="5dp"
+                android:layout_marginEnd="12dp"
+                android:ellipsize="end"
+                android:maxLines="2"
+                android:text="최애 그룹 팬들과 자유롭게 대화해보세요."
+                android:textColor="#777777"
+                android:textSize="13sp"
+                app:layout_constraintTop_toBottomOf="@id/tvFavoriteGroupName"
+                app:layout_constraintStart_toEndOf="@id/ivGroupChatIcon"
+                app:layout_constraintEnd_toStartOf="@id/ivGoChat" />
+
+            <ImageView
+                android:id="@+id/ivGoChat"
+                android:layout_width="26dp"
+                android:layout_height="26dp"
+                android:src="@drawable/chevron_right"
+                app:tint="#8E6AD8"
+                app:layout_constraintTop_toTopOf="@id/ivGroupChatIcon"
+                app:layout_constraintBottom_toBottomOf="@id/ivGroupChatIcon"
+                app:layout_constraintEnd_toEndOf="parent" />
+
+            <TextView
+                android:id="@+id/tv_fan_chat_status"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:background="@drawable/bg_summary_notice"
+                android:paddingStart="14dp"
+                android:paddingTop="10dp"
+                android:paddingEnd="14dp"
+                android:paddingBottom="10dp"
+                android:text="내 페이지에서 설정한 최애 그룹 기준으로 팬톡방이 열려요"
+                android:textColor="#666666"
+                android:textSize="12sp"
+                app:layout_constraintTop_toBottomOf="@id/ivGroupChatIcon"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+    </com.google.android.material.card.MaterialCardView>
+
+
+    <!-- 이용 안내 카드 -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/card_community_notice"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="14dp"
+        app:cardBackgroundColor="#FFFFFF"
+        app:cardCornerRadius="22dp"
+        app:cardElevation="2dp"
+        app:cardUseCompatPadding="true"
+        app:strokeColor="#EFE7FF"
+        app:strokeWidth="1dp"
+        app:layout_constraintTop_toBottomOf="@id/cardFavoriteChatRoom"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <TextView
+            android:id="@+id/tvCommunityNotice"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingStart="16dp"
+            android:paddingTop="14dp"
+            android:paddingEnd="16dp"
+            android:paddingBottom="14dp"
+            android:text="📌 팬톡 이용 안내\n• 비방, 욕설, 광고성 메시지는 제재 대상입니다.\n• 신고 기능은 추후 추가됩니다."
+            android:textColor="#666666"
+            android:textSize="13sp"
+            android:lineSpacingExtra="3dp" />
+
+    </com.google.android.material.card.MaterialCardView>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

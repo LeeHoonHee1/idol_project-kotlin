@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/layoutHomeHeader"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingTop="12dp"
+    android:paddingBottom="8dp">
+
+    <TextView
+        android:id="@+id/tvHomeHeader"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="오늘 일정"
+        android:textColor="#222222"
+        android:textSize="18sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/tvHomeHeaderSub"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="3dp"
+        android:text="지금 확인하면 좋은 최애 그룹 일정"
+        android:textColor="#777777"
+        android:textSize="12sp" />
+
+    <View
+        android:id="@+id/viewHomeHeaderLine"
+        android:layout_width="36dp"
+        android:layout_height="3dp"
+        android:layout_marginTop="7dp"
+        android:background="@drawable/bg_home_header_line" />
+
+</LinearLayout>

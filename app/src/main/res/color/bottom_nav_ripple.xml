@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 리플 색: 라벤더에 10% 투명도 -->
+    <item android:alpha="0.1" android:color="@color/lavender" />
+</selector>

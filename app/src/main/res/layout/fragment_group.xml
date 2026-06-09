@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/group_schedule_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#F8F5FF">
+
+    <androidx.core.widget.NestedScrollView
+        android:id="@+id/scroll_group_schedule"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:fillViewport="true"
+        android:clipToPadding="false"
+        android:paddingStart="16dp"
+        android:paddingTop="18dp"
+        android:paddingEnd="16dp"
+        android:paddingBottom="96dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <!-- 작은 제목 영역 -->
+            <LinearLayout
+                android:id="@+id/layout_group_schedule_title_bar"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingTop="4dp"
+                android:paddingBottom="8dp"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent">
+
+                <TextView
+                    android:id="@+id/tv_group_schedule_title_simple"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="그룹 일정"
+                    android:textColor="#222222"
+                    android:textSize="22sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tv_group_schedule_subtitle_simple"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="3dp"
+                    android:text="최애 그룹의 활동 일정을 확인해요"
+                    android:textColor="#777777"
+                    android:textSize="13sp" />
+
+            </LinearLayout>
+
+            <!-- 그룹 필터 탭 카드 -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/card_group_filter"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                app:cardBackgroundColor="#FFFFFF"
+                app:cardCornerRadius="22dp"
+                app:cardElevation="2dp"
+                app:cardUseCompatPadding="true"
+                app:strokeColor="#EFE7FF"
+                app:strokeWidth="1dp"
+                app:layout_constraintTop_toBottomOf="@id/layout_group_schedule_title_bar"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent">
+
+                <com.google.android.material.tabs.TabLayout
+                    android:id="@+id/tab_group_filter"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="#FFFFFF"
+                    app:tabMode="scrollable"
+                    app:tabIndicatorFullWidth="false"
+                    app:tabIndicatorColor="@color/lavender"
+                    app:tabSelectedTextColor="@color/lavender"
+                    app:tabTextColor="#888888"
+                    app:tabRippleColor="#F0E8FF" />
+
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- 캘린더 카드 -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/card_group_calendar"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                app:cardBackgroundColor="#FFFFFF"
+                app:cardCornerRadius="24dp"
+                app:cardElevation="3dp"
+                app:cardUseCompatPadding="true"
+                app:strokeColor="#EFE7FF"
+                app:strokeWidth="1dp"
+                app:layout_constraintTop_toBottomOf="@id/card_group_filter"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent">
+
+                <com.prolificinteractive.materialcalendarview.MaterialCalendarView
+                    android:id="@+id/calendar_group"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:paddingStart="6dp"
+                    android:paddingTop="8dp"
+                    android:paddingEnd="6dp"
+                    android:paddingBottom="8dp"
+                    app:mcv_selectionMode="single" />
+
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- 선택 날짜 정보 -->
+            <TextView
+                android:id="@+id/tv_group_selected_info"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:background="@drawable/bg_summary_notice"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:paddingStart="14dp"
+                android:paddingTop="11dp"
+                android:paddingEnd="14dp"
+                android:paddingBottom="11dp"
+                android:text="전체 · 2025.12.10 · 일정 0건"
+                android:textColor="#555555"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                app:layout_constraintTop_toBottomOf="@id/card_group_calendar"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent" />
+
+            <!-- 그룹 일정 리스트 -->
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rv_group_schedule"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:nestedScrollingEnabled="false"
+                android:clipToPadding="false"
+                android:paddingBottom="16dp"
+                app:layout_constraintTop_toBottomOf="@id/tv_group_selected_info"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+    </androidx.core.widget.NestedScrollView>
+
+    <!-- 관리자용 일정 추가 FAB -->
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/fab_add_group_schedule"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="18dp"
+        android:layout_marginBottom="18dp"
+        android:contentDescription="그룹 일정 추가"
+        android:src="@drawable/add_24dp"
+        android:visibility="gone"
+        app:backgroundTint="#8E6AD8"
+        app:tint="#FFFFFF"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

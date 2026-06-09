@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- 배경 (비어있는 부분) -->
+    <item android:id="@android:id/background">
+        <shape android:shape="rectangle">
+            <!-- 연한 회색 배경 -->
+            <solid android:color="#EEEEEE" />
+            <!-- 모서리 둥글게 -->
+            <corners android:radius="999dp" />
+        </shape>
+    </item>
+
+    <!-- 채워지는 진행 부분 -->
+    <item android:id="@android:id/progress">
+        <clip>
+            <shape android:shape="rectangle">
+                <!-- 여기서 우리 프로젝트 대표 색 사용 -->
+                <solid android:color="@color/lavender" />
+                <corners android:radius="999dp" />
+            </shape>
+        </clip>
+    </item>
+
+</layer-list>

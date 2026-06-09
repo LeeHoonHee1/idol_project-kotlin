@@ -1,0 +1,178 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/layout_home_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#F8F5FF"
+    android:paddingStart="16dp"
+    android:paddingTop="18dp"
+    android:paddingEnd="16dp">
+
+    <!-- 작은 홈 제목 영역 -->
+    <LinearLayout
+        android:id="@+id/layout_home_title_bar"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingTop="4dp"
+        android:paddingBottom="8dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <TextView
+            android:id="@+id/tvHomeSectionTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="오늘의 팬 홈"
+            android:textColor="#222222"
+            android:textSize="22sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tvHomeSectionSub"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="3dp"
+            android:text="최애 그룹 일정과 팬톡을 한 번에 확인해요"
+            android:textColor="#777777"
+            android:textSize="13sp" />
+
+    </LinearLayout>
+
+
+    <!-- 팬톡 바로가기 카드 -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/cardFanTalkShortcut"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        app:cardBackgroundColor="#FFFFFF"
+        app:cardCornerRadius="20dp"
+        app:cardElevation="2dp"
+        app:cardUseCompatPadding="true"
+        app:strokeColor="#EFE7FF"
+        app:strokeWidth="1dp"
+        app:layout_constraintTop_toBottomOf="@id/layout_home_title_bar"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:minHeight="72dp"
+            android:paddingStart="12dp"
+            android:paddingTop="10dp"
+            android:paddingEnd="12dp"
+            android:paddingBottom="10dp">
+
+            <ImageView
+                android:id="@+id/ivFanTalkIcon"
+                android:layout_width="42dp"
+                android:layout_height="42dp"
+                android:background="@drawable/bg_circle_lavender"
+                android:padding="8dp"
+                android:src="@drawable/person_24dp"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintStart_toStartOf="parent" />
+
+            <TextView
+                android:id="@+id/tvFanTalkTitle"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:layout_marginEnd="8dp"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:text="최애 팬톡 바로가기"
+                android:textColor="#222222"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                app:layout_constraintTop_toTopOf="@id/ivFanTalkIcon"
+                app:layout_constraintStart_toEndOf="@id/ivFanTalkIcon"
+                app:layout_constraintEnd_toStartOf="@id/ivFanTalkArrow" />
+
+            <TextView
+                android:id="@+id/tvFanTalkSub"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:layout_marginTop="4dp"
+                android:layout_marginEnd="8dp"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:text="팬들과 실시간으로 대화해보세요."
+                android:textColor="#777777"
+                android:textSize="12sp"
+                app:layout_constraintTop_toBottomOf="@id/tvFanTalkTitle"
+                app:layout_constraintStart_toEndOf="@id/ivFanTalkIcon"
+                app:layout_constraintEnd_toStartOf="@id/ivFanTalkArrow" />
+
+            <ImageView
+                android:id="@+id/ivFanTalkArrow"
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:src="@drawable/chevron_right"
+                app:tint="#8E6AD8"
+                app:layout_constraintTop_toTopOf="@id/ivFanTalkIcon"
+                app:layout_constraintBottom_toBottomOf="@id/ivFanTalkIcon"
+                app:layout_constraintEnd_toEndOf="parent" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- 홈 피드 리스트 -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/recyclerHomeFeed"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_marginTop="10dp"
+        android:clipToPadding="false"
+        android:paddingBottom="24dp"
+        app:layout_constraintTop_toBottomOf="@id/cardFanTalkShortcut"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+
+    <!-- Empty State -->
+    <LinearLayout
+        android:id="@+id/layoutEmptyHome"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:paddingStart="24dp"
+        android:paddingEnd="24dp"
+        android:visibility="gone"
+        app:layout_constraintTop_toBottomOf="@id/cardFanTalkShortcut"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <TextView
+            android:id="@+id/tvEmptyHomeTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="오늘은 조용한 날이에요"
+            android:textColor="#222222"
+            android:textSize="17sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tvEmptyHome"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:gravity="center"
+            android:text="등록된 최애 그룹 일정이 없습니다."
+            android:textColor="#777777"
+            android:textSize="14sp" />
+
+    </LinearLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

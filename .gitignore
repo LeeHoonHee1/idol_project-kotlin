@@ -1,0 +1,47 @@
+*.iml
+.gradle
+/local.properties
+/.idea/caches
+/.idea/libraries
+/.idea/modules.xml
+/.idea/workspace.xml
+/.idea/navEditor.xml
+/.idea/assetWizardSettings.xml
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+
+# APK / AAB
+*.apk
+*.aab
+
+# Keystore / signing files
+*.jks
+*.keystore
+keystore.properties
+
+# Logs
+*.log
+
+# Gradle generated
+app/build/
+*/build/
+
+# Firebase client config - Public 저장소에는 업로드하지 않기
+app/google-services.json
+
+# Firebase service account key - 절대 업로드 금지
+serviceAccountKey.json
+*.serviceAccount.json
+
+# Android Studio project private files
+/.idea/
+
+# Firebase Functions dependencies/build
+functions/node_modules/
+functions/lib/
+functions/.env
+functions/.runtimeconfig.json

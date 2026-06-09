@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/card_group_schedule_item"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="10dp"
+    app:cardBackgroundColor="#FFFFFF"
+    app:cardCornerRadius="22dp"
+    app:cardElevation="2dp"
+    app:cardUseCompatPadding="true"
+    app:strokeColor="#EFE7FF"
+    app:strokeWidth="1dp">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:minHeight="82dp"
+        android:paddingStart="16dp"
+        android:paddingTop="14dp"
+        android:paddingEnd="16dp"
+        android:paddingBottom="14dp">
+
+        <!-- 활동 타입 칩 -->
+        <TextView
+            android:id="@+id/tv_group_schedule_type"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_group_type_other"
+            android:gravity="center"
+            android:minWidth="54dp"
+            android:paddingStart="11dp"
+            android:paddingTop="6dp"
+            android:paddingEnd="11dp"
+            android:paddingBottom="6dp"
+            android:text="팬싸"
+            android:textColor="#555555"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintStart_toStartOf="parent" />
+
+        <!-- 제목 -->
+        <TextView
+            android:id="@+id/tv_group_schedule_title"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:text="1차 팬사인회"
+            android:textColor="#222222"
+            android:textSize="15sp"
+            android:textStyle="bold"
+            app:layout_constraintTop_toTopOf="@id/tv_group_schedule_type"
+            app:layout_constraintStart_toEndOf="@id/tv_group_schedule_type"
+            app:layout_constraintEnd_toEndOf="parent" />
+
+        <!-- 메모 -->
+        <TextView
+            android:id="@+id/tv_group_schedule_memo"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:layout_marginTop="5dp"
+            android:ellipsize="end"
+            android:maxLines="2"
+            android:text="온라인 팬싸 / 오후 3시"
+            android:textColor="#777777"
+            android:textSize="13sp"
+            app:layout_constraintTop_toBottomOf="@id/tv_group_schedule_title"
+            app:layout_constraintStart_toEndOf="@id/tv_group_schedule_type"
+            app:layout_constraintEnd_toEndOf="parent" />
+
+        <!-- 하단 안내 라인 -->
+        <TextView
+            android:id="@+id/tv_group_schedule_footer"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:background="@drawable/bg_summary_notice"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:paddingStart="12dp"
+            android:paddingTop="8dp"
+            android:paddingEnd="12dp"
+            android:paddingBottom="8dp"
+            android:text="선택한 날짜의 그룹 활동 일정"
+            android:textColor="#666666"
+            android:textSize="12sp"
+            app:layout_constraintTop_toBottomOf="@id/tv_group_schedule_memo"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+</com.google.android.material.card.MaterialCardView>

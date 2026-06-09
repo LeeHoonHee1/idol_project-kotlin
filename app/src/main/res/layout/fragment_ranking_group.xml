@@ -1,0 +1,419 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/layout_group_ranking_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#F8F5FF"
+    android:fillViewport="true"
+    android:paddingTop="8dp"
+    android:paddingBottom="16dp">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingStart="2dp"
+        android:paddingEnd="2dp">
+
+        <TextView
+            android:id="@+id/tv_group_ranking_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="최애 그룹 랭킹"
+            android:textColor="#222222"
+            android:textSize="17sp"
+            android:textStyle="bold"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintStart_toStartOf="parent" />
+
+        <TextView
+            android:id="@+id/tv_group_ranking_subtitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="팬들이 선택한 최애 그룹 순위예요"
+            android:textColor="#888888"
+            android:textSize="12sp"
+            app:layout_constraintTop_toBottomOf="@id/tv_group_ranking_title"
+            app:layout_constraintStart_toStartOf="@id/tv_group_ranking_title" />
+
+        <!-- TOP 3 그룹 영역: 1등 큰 카드 + 2/3등 작은 카드 -->
+        <LinearLayout
+            android:id="@+id/layout_podium"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:orientation="vertical"
+            app:layout_constraintTop_toBottomOf="@id/tv_group_ranking_subtitle"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent">
+
+            <!-- 1등 그룹 큰 카드 -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/layout_first"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:cardBackgroundColor="#FFFDF4"
+                app:cardCornerRadius="24dp"
+                app:cardElevation="4dp"
+                app:cardUseCompatPadding="true"
+                app:strokeColor="#F6D77A"
+                app:strokeWidth="1dp">
+
+                <androidx.constraintlayout.widget.ConstraintLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:minHeight="132dp"
+                    android:padding="16dp">
+
+                    <TextView
+                        android:id="@+id/tv_first_rank_label"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:background="@drawable/bg_reward_chip"
+                        android:paddingStart="12dp"
+                        android:paddingTop="5dp"
+                        android:paddingEnd="12dp"
+                        android:paddingBottom="5dp"
+                        android:text="1위"
+                        android:textColor="#8A5A00"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        app:layout_constraintTop_toTopOf="parent"
+                        app:layout_constraintStart_toStartOf="parent" />
+
+                    <TextView
+                        android:id="@+id/tv_best_group_label"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:letterSpacing="0.06"
+                        android:text="BEST GROUP"
+                        android:textColor="#8A5A00"
+                        android:textSize="10sp"
+                        android:textStyle="bold"
+                        app:layout_constraintTop_toTopOf="@id/tv_first_rank_label"
+                        app:layout_constraintBottom_toBottomOf="@id/tv_first_rank_label"
+                        app:layout_constraintEnd_toEndOf="parent" />
+
+                    <com.google.android.material.imageview.ShapeableImageView
+                        android:id="@+id/iv_first_group"
+                        android:layout_width="72dp"
+                        android:layout_height="72dp"
+                        android:layout_marginTop="14dp"
+                        android:scaleType="centerCrop"
+                        android:src="@drawable/person_24dp"
+                        app:shapeAppearanceOverlay="@style/CircleImageStyle"
+                        app:layout_constraintTop_toBottomOf="@id/tv_first_rank_label"
+                        app:layout_constraintStart_toStartOf="parent" />
+
+                    <TextView
+                        android:id="@+id/tv_first_name"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="16dp"
+                        android:layout_marginEnd="8dp"
+                        android:ellipsize="end"
+                        android:maxLines="1"
+                        android:text="1등 그룹"
+                        android:textColor="#222222"
+                        android:textSize="20sp"
+                        android:textStyle="bold"
+                        app:layout_constraintTop_toTopOf="@id/iv_first_group"
+                        app:layout_constraintStart_toEndOf="@id/iv_first_group"
+                        app:layout_constraintEnd_toEndOf="parent" />
+
+                    <TextView
+                        android:id="@+id/tv_first_sub"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="16dp"
+                        android:layout_marginTop="5dp"
+                        android:text="팬들이 가장 많이 선택한 최애 그룹"
+                        android:textColor="#777777"
+                        android:textSize="13sp"
+                        app:layout_constraintTop_toBottomOf="@id/tv_first_name"
+                        app:layout_constraintStart_toEndOf="@id/iv_first_group"
+                        app:layout_constraintEnd_toEndOf="parent" />
+
+                    <LinearLayout
+                        android:id="@+id/layout_first_like"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="16dp"
+                        android:layout_marginTop="10dp"
+                        android:background="@drawable/bg_friend_favorite_chip"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:paddingStart="12dp"
+                        android:paddingTop="7dp"
+                        android:paddingEnd="12dp"
+                        android:paddingBottom="7dp"
+                        app:layout_constraintTop_toBottomOf="@id/tv_first_sub"
+                        app:layout_constraintStart_toEndOf="@id/iv_first_group">
+
+                        <ImageView
+                            android:layout_width="17dp"
+                            android:layout_height="17dp"
+                            android:src="@drawable/ic_heart_filled" />
+
+                        <TextView
+                            android:id="@+id/tv_first_like"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="5dp"
+                            android:includeFontPadding="false"
+                            android:text="0"
+                            android:textColor="#555555"
+                            android:textSize="14sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+
+                </androidx.constraintlayout.widget.ConstraintLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+
+            <!-- 2등 / 3등 그룹 Row -->
+            <LinearLayout
+                android:id="@+id/layout_group_rank23_row"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:baselineAligned="false"
+                android:orientation="horizontal"
+                android:weightSum="2">
+
+                <!-- 2등 그룹 카드 -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/layout_second"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="5dp"
+                    android:layout_weight="1"
+                    app:cardBackgroundColor="#FFFFFF"
+                    app:cardCornerRadius="22dp"
+                    app:cardElevation="3dp"
+                    app:cardUseCompatPadding="true"
+                    app:strokeColor="#E5E5E5"
+                    app:strokeWidth="1dp">
+
+                    <androidx.constraintlayout.widget.ConstraintLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:minHeight="126dp"
+                        android:padding="12dp">
+
+                        <TextView
+                            android:id="@+id/tv_second_rank_label"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:background="@drawable/bg_friend_favorite_chip"
+                            android:paddingStart="10dp"
+                            android:paddingTop="4dp"
+                            android:paddingEnd="10dp"
+                            android:paddingBottom="4dp"
+                            android:text="2위"
+                            android:textColor="#666666"
+                            android:textSize="11sp"
+                            android:textStyle="bold"
+                            app:layout_constraintTop_toTopOf="parent"
+                            app:layout_constraintStart_toStartOf="parent" />
+
+                        <com.google.android.material.imageview.ShapeableImageView
+                            android:id="@+id/iv_second_group"
+                            android:layout_width="52dp"
+                            android:layout_height="52dp"
+                            android:layout_marginTop="12dp"
+                            android:scaleType="centerCrop"
+                            android:src="@drawable/person_24dp"
+                            app:shapeAppearanceOverlay="@style/CircleImageStyle"
+                            app:layout_constraintTop_toBottomOf="@id/tv_second_rank_label"
+                            app:layout_constraintStart_toStartOf="parent" />
+
+                        <TextView
+                            android:id="@+id/tv_second_name"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="10dp"
+                            android:ellipsize="end"
+                            android:maxLines="1"
+                            android:text="2등 그룹"
+                            android:textColor="#222222"
+                            android:textSize="14sp"
+                            android:textStyle="bold"
+                            app:layout_constraintTop_toTopOf="@id/iv_second_group"
+                            app:layout_constraintStart_toEndOf="@id/iv_second_group"
+                            app:layout_constraintEnd_toEndOf="parent" />
+
+                        <LinearLayout
+                            android:id="@+id/layout_second_like"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="10dp"
+                            android:layout_marginTop="8dp"
+                            android:background="@drawable/bg_friend_favorite_chip"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal"
+                            android:paddingStart="9dp"
+                            android:paddingTop="6dp"
+                            android:paddingEnd="9dp"
+                            android:paddingBottom="6dp"
+                            app:layout_constraintTop_toBottomOf="@id/tv_second_name"
+                            app:layout_constraintStart_toEndOf="@id/iv_second_group">
+
+                            <ImageView
+                                android:layout_width="15dp"
+                                android:layout_height="15dp"
+                                android:src="@drawable/ic_heart_filled" />
+
+                            <TextView
+                                android:id="@+id/tv_second_like"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="4dp"
+                                android:includeFontPadding="false"
+                                android:text="0"
+                                android:textColor="#555555"
+                                android:textSize="12sp"
+                                android:textStyle="bold" />
+                        </LinearLayout>
+
+                    </androidx.constraintlayout.widget.ConstraintLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+
+                <!-- 3등 그룹 카드 -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/layout_third"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="5dp"
+                    android:layout_weight="1"
+                    app:cardBackgroundColor="#FFFFFF"
+                    app:cardCornerRadius="22dp"
+                    app:cardElevation="3dp"
+                    app:cardUseCompatPadding="true"
+                    app:strokeColor="#F2D8CF"
+                    app:strokeWidth="1dp">
+
+                    <androidx.constraintlayout.widget.ConstraintLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:minHeight="126dp"
+                        android:padding="12dp">
+
+                        <TextView
+                            android:id="@+id/tv_third_rank_label"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:background="@drawable/bg_friend_favorite_chip"
+                            android:paddingStart="10dp"
+                            android:paddingTop="4dp"
+                            android:paddingEnd="10dp"
+                            android:paddingBottom="4dp"
+                            android:text="3위"
+                            android:textColor="#8A5A00"
+                            android:textSize="11sp"
+                            android:textStyle="bold"
+                            app:layout_constraintTop_toTopOf="parent"
+                            app:layout_constraintStart_toStartOf="parent" />
+
+                        <com.google.android.material.imageview.ShapeableImageView
+                            android:id="@+id/iv_third_group"
+                            android:layout_width="52dp"
+                            android:layout_height="52dp"
+                            android:layout_marginTop="12dp"
+                            android:scaleType="centerCrop"
+                            android:src="@drawable/person_24dp"
+                            app:shapeAppearanceOverlay="@style/CircleImageStyle"
+                            app:layout_constraintTop_toBottomOf="@id/tv_third_rank_label"
+                            app:layout_constraintStart_toStartOf="parent" />
+
+                        <TextView
+                            android:id="@+id/tv_third_name"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="10dp"
+                            android:ellipsize="end"
+                            android:maxLines="1"
+                            android:text="3등 그룹"
+                            android:textColor="#222222"
+                            android:textSize="14sp"
+                            android:textStyle="bold"
+                            app:layout_constraintTop_toTopOf="@id/iv_third_group"
+                            app:layout_constraintStart_toEndOf="@id/iv_third_group"
+                            app:layout_constraintEnd_toEndOf="parent" />
+
+                        <LinearLayout
+                            android:id="@+id/layout_third_like"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="10dp"
+                            android:layout_marginTop="8dp"
+                            android:background="@drawable/bg_friend_favorite_chip"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal"
+                            android:paddingStart="9dp"
+                            android:paddingTop="6dp"
+                            android:paddingEnd="9dp"
+                            android:paddingBottom="6dp"
+                            app:layout_constraintTop_toBottomOf="@id/tv_third_name"
+                            app:layout_constraintStart_toEndOf="@id/iv_third_group">
+
+                            <ImageView
+                                android:layout_width="15dp"
+                                android:layout_height="15dp"
+                                android:src="@drawable/ic_heart_filled" />
+
+                            <TextView
+                                android:id="@+id/tv_third_like"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="4dp"
+                                android:includeFontPadding="false"
+                                android:text="0"
+                                android:textColor="#555555"
+                                android:textSize="12sp"
+                                android:textStyle="bold" />
+                        </LinearLayout>
+
+                    </androidx.constraintlayout.widget.ConstraintLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/tv_group_rank_list_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="18dp"
+            android:text="전체 그룹 랭킹"
+            android:textColor="#222222"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            app:layout_constraintTop_toBottomOf="@id/layout_podium"
+            app:layout_constraintStart_toStartOf="parent" />
+
+        <TextView
+            android:id="@+id/tv_group_rank_list_subtitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="4위부터 전체 그룹 순위를 확인해요"
+            android:textColor="#888888"
+            android:textSize="12sp"
+            app:layout_constraintTop_toBottomOf="@id/tv_group_rank_list_title"
+            app:layout_constraintStart_toStartOf="@id/tv_group_rank_list_title" />
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/recycler_group_rank"
+            android:layout_width="0dp"
+            android:layout_height="420dp"
+            android:layout_marginTop="12dp"
+            android:clipToPadding="false"
+            android:paddingBottom="16dp"
+            app:layout_constraintTop_toBottomOf="@id/tv_group_rank_list_subtitle"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</androidx.core.widget.NestedScrollView>
