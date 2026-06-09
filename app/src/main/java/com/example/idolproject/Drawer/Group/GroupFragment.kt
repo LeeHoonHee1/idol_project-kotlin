@@ -7,7 +7,6 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
-import com.example.idolproject.Data.ScheduleDummyRepository
 import com.example.idolproject.R
 import com.example.idolproject.databinding.FragmentGroupBinding
 import com.google.android.material.tabs.TabLayout
