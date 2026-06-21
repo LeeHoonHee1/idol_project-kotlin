@@ -11,14 +11,19 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import coil.load
 import com.example.idolproject.R
-import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.ListenerRegistration
-import com.google.firebase.firestore.Query
+import dagger.hilt.android.AndroidEntryPoint
+import androidx.fragment.app.viewModels
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
+import kotlinx.coroutines.launch
 
+@AndroidEntryPoint
 class GroupRankingFragment : Fragment(R.layout.fragment_ranking_group) {
 
+    private val viewModel: RankingViewModel by viewModels()
     private lateinit var recyclerView: RecyclerView
-    private lateinit var adapter: GroupRankingAdapter
+    private lateinit var rankingAdapter: GroupRankingAdapter
 
     private lateinit var ivFirstGroup: ImageView
     private lateinit var ivSecondGroup: ImageView
@@ -32,15 +37,11 @@ class GroupRankingFragment : Fragment(R.layout.fragment_ranking_group) {
     private lateinit var tvSecondLike: TextView
     private lateinit var tvThirdLike: TextView
 
-    private val db = FirebaseFirestore.getInstance()
-    private var rankingListener: ListenerRegistration? = null
-
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
         bindViews(view)
         setupRecyclerView()
-        loadGroupRanking()
+        observeGroupRanking()
     }
 
     private fun bindViews(view: View) {
@@ -60,49 +61,35 @@ class GroupRankingFragment : Fragment(R.layout.fragment_ranking_group) {
     }
 
     private fun setupRecyclerView() {
-        adapter = GroupRankingAdapter(emptyList())
+        rankingAdapter = GroupRankingAdapter(emptyList())
 
         recyclerView.layoutManager = LinearLayoutManager(requireContext())
-        recyclerView.adapter = adapter
+        recyclerView.adapter = rankingAdapter
     }
 
-    private fun loadGroupRanking() {
-        rankingListener?.remove()
+    private fun observeGroupRanking() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.groupRankingUiState.collect { uiState ->
+                    when (uiState) {
+                        GroupRankingUiState.Loading -> {
+                            bindPodium(emptyList())
+                            rankingAdapter.updateList(emptyList())
+                        }
 
-        rankingListener = db.collection("groups")
-            .orderBy("likeCount", Query.Direction.DESCENDING)
-            .addSnapshotListener { snapshot, e ->
-                if (e != null) {
-                    Log.e("GroupRanking", "조회 실패", e)
-                    Toast.makeText(
-                        requireContext(),
-                        "그룹 랭킹을 불러오지 못했어: ${e.message}",
-                        Toast.LENGTH_LONG
-                    ).show()
-                    return@addSnapshotListener
-                }
+                        is GroupRankingUiState.Success -> {
+                            bindPodium(uiState.top3)
+                            rankingAdapter.updateList(uiState.others)
+                        }
 
-                val fullList = snapshot?.documents
-                    ?.map { doc ->
-                        GroupRank(
-                            groupId = doc.id,
-                            groupName = doc.getString("groupName") ?: "",
-                            imageUrl = doc.getString("imageUrl") ?: "",
-                            likeCount = doc.getLong("likeCount") ?: 0L
-                        )
+                        is GroupRankingUiState.Error -> {
+                            bindPodium(emptyList())
+                            rankingAdapter.updateList(emptyList())
+                        }
                     }
-                    .orEmpty()
-
-                bindPodium(fullList)
-
-                val restList = if (fullList.size > 3) {
-                    fullList.drop(3)
-                } else {
-                    emptyList()
                 }
-
-                adapter.updateList(restList)
             }
+        }
     }
 
     private fun bindPodium(fullList: List<GroupRank>) {
@@ -157,11 +144,5 @@ class GroupRankingFragment : Fragment(R.layout.fragment_ranking_group) {
                 error(R.drawable.person_24dp)
             }
         }
-    }
-
-    override fun onDestroyView() {
-        rankingListener?.remove()
-        rankingListener = null
-        super.onDestroyView()
     }
 }

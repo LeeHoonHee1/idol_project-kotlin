@@ -12,12 +12,17 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import coil.load
 import com.example.idolproject.R
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.Query
+import dagger.hilt.android.AndroidEntryPoint
+import androidx.fragment.app.viewModels
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
+import kotlinx.coroutines.launch
 
+@AndroidEntryPoint
 class UserRankingFragment : Fragment() {
 
+    private val viewModel: RankingViewModel by viewModels()
     private lateinit var recyclerView: RecyclerView
     private lateinit var rankingAdapter: UserRankingAdapter
 
@@ -42,9 +47,6 @@ class UserRankingFragment : Fragment() {
     private lateinit var tvRank3Level: TextView
     private lateinit var imgRank3UserBadge: ImageView
 
-    private val db = FirebaseFirestore.getInstance()
-    private val auth = FirebaseAuth.getInstance()
-
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -55,10 +57,9 @@ class UserRankingFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
         bindViews(view)
         setupRecyclerView()
-        loadUserRanking()
+        observeUserRanking()
     }
 
     private fun bindViews(view: View) {
@@ -89,59 +90,41 @@ class UserRankingFragment : Fragment() {
     private fun setupRecyclerView() {
         rankingAdapter = UserRankingAdapter(
             items = emptyList(),
-            myUid = auth.currentUser?.uid
+            myUid = null
         )
-
         recyclerView.layoutManager = LinearLayoutManager(requireContext())
         recyclerView.adapter = rankingAdapter
     }
 
-    private fun loadUserRanking() {
-        db.collection("users")
-            .orderBy("level", Query.Direction.DESCENDING)
-            .orderBy("exp", Query.Direction.DESCENDING)
-            .get()
-            .addOnSuccessListener { snapshot ->
-                val users = snapshot.documents.map { doc ->
-                    UserRank(
-                        uid = doc.id,
-                        nickname = doc.getString("nickname") ?: "이름없음",
-                        level = doc.getLong("level") ?: 1L,
-                        exp = doc.getLong("exp") ?: 0L,
-                        badgeId = doc.getString("badgeId").orEmpty(),
-                        profileImageUrl = doc.getString("photoUrl")
-                            ?: doc.getString("profileImageUrl")
-                            ?: "",
-                        favoriteGroupId = doc.getString("favoriteGroupId").orEmpty(),
-                        pointsTotal = doc.getLong("points_total") ?: 0L
-                    )
+    private fun observeUserRanking() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.userRankingUiState.collect { uiState ->
+                    when (uiState) {
+                        UserRankingUiState.Loading -> {
+                            bindEmptyTop3()
+                            bindEmptyMyCard()
+                            rankingAdapter.updateList(emptyList())
+                        }
+
+                        is UserRankingUiState.Success -> {
+                            bindTop3(uiState.top3)
+                            bindMyCard(
+                                myRank = uiState.myRank,
+                                myUser = uiState.myUser
+                            )
+                            rankingAdapter.updateList(uiState.others)
+                        }
+
+                        is UserRankingUiState.Error -> {
+                            bindEmptyTop3()
+                            bindEmptyMyCard()
+                            rankingAdapter.updateList(emptyList())
+                        }
+                    }
                 }
-
-                updateRankingUI(users)
             }
-            .addOnFailureListener { e ->
-                Log.e("UserRankingFragment", "랭킹 불러오기 실패", e)
-            }
-    }
-
-    private fun updateRankingUI(sortedUsers: List<UserRank>) {
-        if (sortedUsers.isEmpty()) {
-            bindEmptyTop3()
-            bindEmptyMyCard()
-            rankingAdapter.updateList(emptyList())
-            return
         }
-
-        val top3 = sortedUsers.take(3)
-        val others = if (sortedUsers.size > 3) {
-            sortedUsers.drop(3)
-        } else {
-            emptyList()
-        }
-
-        bindTop3(top3)
-        bindMyCard(sortedUsers)
-        rankingAdapter.updateList(others)
     }
 
     private fun bindTop3(top3: List<UserRank>) {
@@ -210,23 +193,14 @@ class UserRankingFragment : Fragment() {
         )
     }
 
-    private fun bindMyCard(sortedUsers: List<UserRank>) {
-        val myUid = auth.currentUser?.uid
-
-        if (myUid.isNullOrBlank()) {
+    private fun bindMyCard(
+        myRank: Int?,
+        myUser: UserRank?
+    ) {
+        if (myRank == null || myUser == null) {
             bindEmptyMyCard()
             return
         }
-
-        val myIndex = sortedUsers.indexOfFirst { it.uid == myUid }
-
-        if (myIndex == -1) {
-            bindEmptyMyCard()
-            return
-        }
-
-        val myUser = sortedUsers[myIndex]
-        val myRank = myIndex + 1
 
         tvMyNickname.text = myUser.nickname
         tvMyLevelExp.text = "Lv.${myUser.level} · EXP ${myUser.exp}"
