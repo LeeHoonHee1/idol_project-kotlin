@@ -42,7 +42,9 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Intent
 import com.example.idolproject.Drawer.Community.GroupChatActivity
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelectedListener {
 
     private lateinit var drawerLayout: DrawerLayout
