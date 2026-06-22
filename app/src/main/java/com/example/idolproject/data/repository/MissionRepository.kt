@@ -1,15 +1,16 @@
-package com.example.idolproject.UI.Mission
+package com.example.idolproject.data.repository
 
-import com.google.firebase.Timestamp
+import com.example.idolproject.UI.Mission.MissionRewardManager
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
-import java.util.Calendar
+import javax.inject.Inject
 
-class MissionRepository {
+class MissionRepository @Inject constructor() {
 
     private val db = FirebaseFirestore.getInstance()
 
@@ -103,24 +104,24 @@ class MissionRepository {
     }
 
     private fun getCurrentWeekRange(): Pair<String, String> {
-        val calendar = java.util.Calendar.getInstance()
+        val calendar = Calendar.getInstance()
 
         // 월요일 시작 기준
-        calendar.firstDayOfWeek = java.util.Calendar.MONDAY
+        calendar.firstDayOfWeek = Calendar.MONDAY
 
-        val today = calendar.clone() as java.util.Calendar
+        val today = calendar.clone() as Calendar
 
-        val dayOfWeek = today.get(java.util.Calendar.DAY_OF_WEEK)
+        val dayOfWeek = today.get(Calendar.DAY_OF_WEEK)
         val diffToMonday = when (dayOfWeek) {
-            java.util.Calendar.SUNDAY -> -6
-            else -> java.util.Calendar.MONDAY - dayOfWeek
+            Calendar.SUNDAY -> -6
+            else -> Calendar.MONDAY - dayOfWeek
         }
 
-        val startCal = today.clone() as java.util.Calendar
-        startCal.add(java.util.Calendar.DAY_OF_MONTH, diffToMonday)
+        val startCal = today.clone() as Calendar
+        startCal.add(Calendar.DAY_OF_MONTH, diffToMonday)
 
-        val endCal = startCal.clone() as java.util.Calendar
-        endCal.add(java.util.Calendar.DAY_OF_MONTH, 6)
+        val endCal = startCal.clone() as Calendar
+        endCal.add(Calendar.DAY_OF_MONTH, 6)
 
         val sdf = SimpleDateFormat("yyyyMMdd", Locale.getDefault())
         val startDateKey = sdf.format(startCal.time)

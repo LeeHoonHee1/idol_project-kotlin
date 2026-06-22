@@ -7,17 +7,21 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
-import androidx.core.content.ContentProviderCompat.requireContext
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
-import coil.util.CoilUtils.result
+import androidx.lifecycle.repeatOnLifecycle
 import com.example.idolproject.R
 import com.google.android.material.card.MaterialCardView
-import com.google.firebase.auth.FirebaseAuth
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 
+@AndroidEntryPoint
 class DailyMissionFragment : Fragment() {
+
+    private val viewModel: MissionViewModel by viewModels()
 
     private lateinit var cardAttendance: MaterialCardView
     private lateinit var ivDailyIcon: ImageView
@@ -27,9 +31,6 @@ class DailyMissionFragment : Fragment() {
     private lateinit var cardTestExp: MaterialCardView
     private lateinit var tvTestStatus: TextView
     private lateinit var tvTestHint: TextView
-
-    private val auth: FirebaseAuth by lazy { FirebaseAuth.getInstance() }
-    private val missionRepository = MissionRepository()
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -44,8 +45,11 @@ class DailyMissionFragment : Fragment() {
 
         bindViews(view)
         setupClickListeners()
-        checkTodayMissionStatus()
         setupTestMissionUi()
+        observeDailyMissionUiState()
+        observeMissionEvent()
+
+        viewModel.loadDailyMissionStatus()
     }
 
     private fun bindViews(view: View) {
@@ -61,11 +65,11 @@ class DailyMissionFragment : Fragment() {
 
     private fun setupClickListeners() {
         cardAttendance.setOnClickListener {
-            completeAttendanceMission()
+            viewModel.completeDailyAttendance()
         }
 
         cardTestExp.setOnClickListener {
-            grantTestExp()
+            viewModel.grantTestExp()
         }
     }
 
@@ -76,162 +80,97 @@ class DailyMissionFragment : Fragment() {
         cardTestExp.isEnabled = true
     }
 
-    private fun checkTodayMissionStatus() {
-        val uid = auth.currentUser?.uid
-
-        if (uid == null) {
-            Toast.makeText(requireContext(), "로그인 정보를 확인해주세요.", Toast.LENGTH_SHORT).show()
-            updateDailyMissionUi(isCompleted = false)
-            return
-        }
-
+    private fun observeDailyMissionUiState() {
         viewLifecycleOwner.lifecycleScope.launch {
-            runCatching {
-                missionRepository.isTodayAttendanceCompleted(uid)
-            }.onSuccess { isCompleted ->
-                updateDailyMissionUi(isCompleted)
-            }.onFailure {
-                updateDailyMissionUi(isCompleted = false)
-                Toast.makeText(
-                    requireContext(),
-                    "미션 상태를 불러오지 못했습니다.",
-                    Toast.LENGTH_SHORT
-                ).show()
-            }
-        }
-    }
-
-    private fun completeAttendanceMission() {
-        val uid = auth.currentUser?.uid
-
-        if (uid == null) {
-            Toast.makeText(requireContext(), "로그인 정보를 확인해주세요.", Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        viewLifecycleOwner.lifecycleScope.launch {
-            try {
-                cardAttendance.isEnabled = false
-
-                val result = missionRepository.completeDailyAttendance(uid)
-
-                if (result.isSuccess) {
-                    updateDailyMissionUi(isCompleted = true)
-
-                    showMissionRewardDialog(
-                        icon = "🎉",
-                        title = "출석 완료!",
-                        message = "오늘의 팬 활동 미션을 완료했어요.",
-                        rewardText = "EXP +${MissionRewardManager.DAILY_ATTENDANCE_REWARD_EXP}"
-                    )
-                } else {
-                    cardAttendance.isEnabled = true
-                    val message = result.exceptionOrNull()?.message ?: "출석 처리에 실패했습니다."
-                    Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
-                    checkTodayMissionStatus()
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.dailyUiState.collect { uiState ->
+                    bindDailyMissionUi(uiState)
                 }
-            } catch (e: Exception) {
-                cardAttendance.isEnabled = true
-                Toast.makeText(
-                    requireContext(),
-                    "출석 처리 중 오류가 발생했습니다.",
-                    Toast.LENGTH_SHORT
-                ).show()
             }
         }
     }
 
-    private fun updateDailyMissionUi(isCompleted: Boolean) {
-        if (isCompleted) {
-            tvDailyStatus.text = "완료"
-            tvDailyStatus.background =
-                ContextCompat.getDrawable(requireContext(), R.drawable.bg_mission_status_done)
+    private fun observeMissionEvent() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.event.collect { event ->
+                    when (event) {
+                        is MissionEvent.ShowToast -> {
+                            Toast.makeText(
+                                requireContext(),
+                                event.message,
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+
+                        is MissionEvent.ShowRewardDialog -> {
+                            showMissionRewardDialog(
+                                icon = event.icon,
+                                title = event.title,
+                                message = event.message,
+                                rewardText = event.rewardText
+                            )
+
+                            if (event.title.contains("테스트")) {
+                                tvTestStatus.text = "반복 가능"
+                                tvTestHint.text = "테스트 EXP +100 지급 완료! 내 페이지, 친구, 랭킹 반영을 확인해보세요."
+                                cardTestExp.isEnabled = true
+                                playMissionCompleteAnimation(cardTestExp)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private fun bindDailyMissionUi(uiState: DailyMissionUiState) {
+        tvDailyStatus.text = uiState.buttonText
+        tvDailyHint.text = uiState.descriptionText
+        cardAttendance.isEnabled = uiState.buttonEnabled
+
+        if (uiState.isLoading) {
+            cardAttendance.alpha = 0.7f
+            ivDailyIcon.setImageResource(R.drawable.ic_mission_daily)
+            tvDailyStatus.background = ContextCompat.getDrawable(
+                requireContext(),
+                R.drawable.bg_lavender_chip
+            )
+            tvDailyStatus.setTextColor(
+                ContextCompat.getColor(requireContext(), R.color.lavender)
+            )
+            return
+        }
+
+        if (uiState.isCompleted) {
+            tvDailyStatus.background = ContextCompat.getDrawable(
+                requireContext(),
+                R.drawable.bg_mission_status_done
+            )
             tvDailyStatus.setTextColor(
                 ContextCompat.getColor(requireContext(), R.color.black)
             )
-
             ivDailyIcon.setImageResource(R.drawable.ic_mission_check)
-
-            tvDailyHint.text =
-                "오늘 보상 수령 완료 · 내일 다시 참여해보세요"
-
             cardAttendance.alpha = 0.92f
-            cardAttendance.isEnabled = false
-            cardAttendance.strokeColor =
-                ContextCompat.getColor(requireContext(), R.color.lavender)
-
+            cardAttendance.strokeColor = ContextCompat.getColor(
+                requireContext(),
+                R.color.lavender
+            )
             playMissionCompleteAnimation(cardAttendance)
         } else {
-            tvDailyStatus.text = "0 / 1"
-            tvDailyStatus.background =
-                ContextCompat.getDrawable(requireContext(), R.drawable.bg_lavender_chip)
+            tvDailyStatus.background = ContextCompat.getDrawable(
+                requireContext(),
+                R.drawable.bg_lavender_chip
+            )
             tvDailyStatus.setTextColor(
                 ContextCompat.getColor(requireContext(), R.color.lavender)
             )
-
             ivDailyIcon.setImageResource(R.drawable.ic_mission_daily)
-
-            tvDailyHint.text =
-                "오늘의 팬 활동을 시작해보세요 · 완료 시 EXP +${MissionRewardManager.DAILY_ATTENDANCE_REWARD_EXP}"
-
             cardAttendance.alpha = 1.0f
-            cardAttendance.isEnabled = true
-            cardAttendance.strokeColor =
-                ContextCompat.getColor(requireContext(), R.color.lavender)
-        }
-    }
-
-    private fun grantTestExp() {
-        val uid = auth.currentUser?.uid
-
-        if (uid == null) {
-            Toast.makeText(requireContext(), "로그인 정보를 확인해주세요.", Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        viewLifecycleOwner.lifecycleScope.launch {
-            try {
-                cardTestExp.isEnabled = false
-                tvTestStatus.text = "지급 중"
-
-                val result = missionRepository.grantTestExp(uid, 100)
-
-                if (result.isSuccess) {
-                    tvTestStatus.text = "반복 가능"
-                    tvTestHint.text = "테스트 EXP +100 지급 완료! 내 페이지, 친구, 랭킹 반영을 확인해보세요."
-
-                    playMissionCompleteAnimation(cardTestExp)
-
-                    if (result.isSuccess) {
-                        tvTestStatus.text = "반복 가능"
-                        tvTestHint.text = "테스트 EXP +100 지급 완료! 내 페이지, 친구, 랭킹 반영을 확인해보세요."
-
-                        playMissionCompleteAnimation(cardTestExp)
-
-                        showMissionRewardDialog(
-                            icon = "🧪",
-                            title = "테스트 EXP 지급 완료",
-                            message = "레벨과 뱃지 변화를 확인하기 위한 테스트 보상을 지급했어요.",
-                            rewardText = "EXP +100"
-                        )
-                    }
-                } else {
-                    tvTestStatus.text = "반복 가능"
-                    val message = result.exceptionOrNull()?.message ?: "테스트 EXP 지급 실패"
-                    Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
-                }
-
-                cardTestExp.isEnabled = true
-            } catch (e: Exception) {
-                tvTestStatus.text = "반복 가능"
-                cardTestExp.isEnabled = true
-
-                Toast.makeText(
-                    requireContext(),
-                    "테스트 EXP 지급 중 오류가 발생했습니다.",
-                    Toast.LENGTH_SHORT
-                ).show()
-            }
+            cardAttendance.strokeColor = ContextCompat.getColor(
+                requireContext(),
+                R.color.lavender
+            )
         }
     }
 
@@ -262,9 +201,7 @@ class DailyMissionFragment : Fragment() {
         val tvTitle = dialogView.findViewById<TextView>(R.id.tv_dialog_title)
         val tvMessage = dialogView.findViewById<TextView>(R.id.tv_dialog_message)
         val tvReward = dialogView.findViewById<TextView>(R.id.tv_dialog_reward)
-        val btnConfirm = dialogView.findViewById<com.google.android.material.button.MaterialButton>(
-            R.id.btn_dialog_confirm
-        )
+        val btnConfirm = dialogView.findViewById<TextView>(R.id.btn_dialog_confirm)
 
         tvIcon.text = icon
         tvTitle.text = title
