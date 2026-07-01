@@ -1,7 +1,6 @@
 package com.example.idolproject.UI.Friend
 
 import android.os.Bundle
-import android.util.Log
 import android.view.View
 import android.widget.TextView
 import android.widget.Toast
@@ -12,49 +11,31 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.idolproject.R
 import com.google.android.material.button.MaterialButton
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FieldValue
-import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.ListenerRegistration
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.tasks.await
 import com.google.android.material.chip.ChipGroup
+import androidx.fragment.app.viewModels
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.repeatOnLifecycle
+import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
 
+@AndroidEntryPoint
 class FriendFragment : Fragment(R.layout.fragment_friend) {
 
+    private val viewModel: FriendViewModel by viewModels()
     private lateinit var recyclerFriends: RecyclerView
     private lateinit var tvFriendCount: TextView
     private lateinit var adapter: FriendAdapter
-
     private lateinit var btnSearchFriend: MaterialButton
     private lateinit var btnAddFriend: MaterialButton
-
     private lateinit var layoutFriendEmpty: View
     private lateinit var btnEmptyFindFriend: MaterialButton
-
     private lateinit var tvFriendEmptyTitle: TextView
     private lateinit var tvFriendEmptyDesc: TextView
-
     private lateinit var chipGroupFriendFilter: ChipGroup
-
     private var allFriends: List<Friend> = emptyList()
-
-    private val auth = FirebaseAuth.getInstance()
-    private val db = FirebaseFirestore.getInstance()
-
-    private var friendsListener: ListenerRegistration? = null
-    private var requestCountListener: ListenerRegistration? = null
-
     private var currentFriendCount: Int = 0
     private var currentPendingRequestCount: Int = 0
-
-    private val groupDisplayMap = mapOf(
-        "ive" to "IVE",
-        "aespa" to "aespa",
-        "newjeans" to "NewJeans",
-        "lesserafim" to "LE SSERAFIM",
-        "babymonster" to "BABYMONSTER"
-    )
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -90,7 +71,7 @@ class FriendFragment : Fragment(R.layout.fragment_friend) {
 
         adapter = FriendAdapter(
             onItemClick = { friend ->
-                openFriendProfile(friend.uid)
+                viewModel.openFriendProfile(friend.uid)
             },
             onDeleteClick = { friend ->
                 showDeleteConfirm(friend)
@@ -100,59 +81,48 @@ class FriendFragment : Fragment(R.layout.fragment_friend) {
         recyclerFriends.layoutManager = LinearLayoutManager(requireContext())
         recyclerFriends.adapter = adapter
 
-        startFriendsListener()
-        startPendingRequestCountListener()
+        observeFriendListUiState()
+        observeFriendEvent()
+
+        viewModel.startObserveFriendList()
+        viewModel.startObservePendingRequestCount()
     }
 
-    private fun startFriendsListener() {
-        val myUid = auth.currentUser?.uid
-
-        if (myUid.isNullOrBlank()) {
-            toast("로그인이 필요해")
-            return
-        }
-
-        friendsListener?.remove()
-
-        friendsListener = db.collection("friends")
-            .document(myUid)
-            .collection("list")
-            .addSnapshotListener { snap, err ->
-                if (err != null) {
-                    Log.e("FRIEND_LIST", "friends listener failed", err)
-                    toast("친구 목록을 불러오지 못했어")
-                    return@addSnapshotListener
+    private fun observeFriendListUiState() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.friendListUiState.collect { uiState ->
+                    bindFriendListUi(uiState)
                 }
-
-                val friendUids = snap?.documents
-                    ?.map { it.id }
-                    .orEmpty()
-
-                loadFriendProfiles(myUid, friendUids)
             }
+        }
     }
 
-    private fun startPendingRequestCountListener() {
-        val myUid = auth.currentUser?.uid
+    private fun observeFriendEvent() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.event.collect { event ->
+                    when (event) {
+                        is FriendEvent.ShowToast -> {
+                            toast(event.message)
+                        }
 
-        if (myUid.isNullOrBlank()) {
-            return
-        }
-
-        requestCountListener?.remove()
-
-        requestCountListener = db.collection("friend_requests")
-            .whereEqualTo("receiverUid", myUid)
-            .whereEqualTo("status", FriendRequestStatus.PENDING.raw)
-            .addSnapshotListener { snap, err ->
-                if (err != null) {
-                    Log.e("FRIEND_COUNT", "pending request count listener failed", err)
-                    return@addSnapshotListener
+                        is FriendEvent.OpenFriendProfile -> {
+                            openFriendProfile(event.friendUid)
+                        }
+                    }
                 }
-
-                currentPendingRequestCount = snap?.size() ?: 0
-                updateFriendSummaryText()
             }
+        }
+    }
+
+    private fun bindFriendListUi(uiState: FriendListUiState) {
+        allFriends = uiState.friends
+        currentFriendCount = uiState.friends.size
+        currentPendingRequestCount = uiState.pendingRequestCount
+
+        updateFriendSummaryText()
+        applyFriendFilter()
     }
 
     private fun updateFriendSummaryText() {
@@ -196,139 +166,15 @@ class FriendFragment : Fragment(R.layout.fragment_friend) {
         updateEmptyState(filteredList.size)
     }
 
-    private fun loadFriendProfiles(myUid: String, friendUids: List<String>) {
-        if (friendUids.isEmpty()) {
-            allFriends = emptyList()
-            adapter.submitList(emptyList())
-            currentFriendCount = 0
-            updateFriendSummaryText()
-            updateEmptyState(0)
-            return
-        }
-
-        viewLifecycleOwner.lifecycleScope.launch {
-            runCatching {
-                val mySnap = db.collection("users")
-                    .document(myUid)
-                    .get()
-                    .await()
-
-                val myFavoriteGroupId = mySnap.getString("favoriteGroupId").orEmpty()
-
-                val friends = mutableListOf<Friend>()
-
-                for (friendUid in friendUids) {
-                    val userSnap = db.collection("users")
-                        .document(friendUid)
-                        .get()
-                        .await()
-
-                    if (!userSnap.exists()) continue
-
-                    val nickname = userSnap.getString("nickname") ?: "(알 수 없음)"
-                    val statusMessage = userSnap.getString("statusMessage") ?: "상태메시지 없음"
-
-                    val level = (userSnap.getLong("level") ?: 1L).toInt()
-                    val badgeIdFromDb = userSnap.getString("badgeId").orEmpty()
-                    val finalBadgeId = if (badgeIdFromDb.isBlank() || badgeIdFromDb == "default") {
-                        getBadgeIdByLevel(level)
-                    } else {
-                        badgeIdFromDb
-                    }
-
-                    val favoriteGroupId = userSnap.getString("favoriteGroupId").orEmpty()
-                    val favoriteGroupName = if (favoriteGroupId.isBlank()) {
-                        "-"
-                    } else {
-                        groupDisplayMap[favoriteGroupId] ?: favoriteGroupId
-                    }
-
-                    val photoUrl = userSnap.getString("photoUrl")
-
-                    val isSameFavorite = myFavoriteGroupId.isNotBlank() &&
-                            favoriteGroupId.isNotBlank() &&
-                            myFavoriteGroupId == favoriteGroupId
-
-                    friends.add(
-                        Friend(
-                            uid = friendUid,
-                            nickname = nickname,
-                            statusMessage = statusMessage,
-                            favoriteGroupId = favoriteGroupId,
-                            favoriteGroupName = favoriteGroupName,
-                            level = level,
-                            badgeId = finalBadgeId,
-                            photoUrl = photoUrl,
-                            isSameFavorite = isSameFavorite
-                        )
-                    )
-                }
-
-                friends.sortedWith(
-                    compareByDescending<Friend> { it.isSameFavorite }
-                        .thenByDescending { it.level }
-                        .thenBy { it.nickname }
-                )
-            }.onSuccess { friends ->
-                allFriends = friends
-                currentFriendCount = friends.size
-                updateFriendSummaryText()
-                applyFriendFilter()
-            }.onFailure { e ->
-                Log.e("FRIEND_LIST", "loadFriendProfiles failed", e)
-                toast("친구 정보를 불러오지 못했어: ${e.message}")
-
-                allFriends = emptyList()
-                adapter.submitList(emptyList())
-                currentFriendCount = 0
-                updateFriendSummaryText()
-                updateEmptyState(0)
-            }
-        }
-    }
-
     private fun showDeleteConfirm(friend: Friend) {
         AlertDialog.Builder(requireContext())
             .setTitle("친구 삭제")
             .setMessage("${friend.nickname}님을 친구에서 삭제할까요?")
             .setNegativeButton("취소", null)
             .setPositiveButton("삭제") { _, _ ->
-                val me = auth.currentUser?.uid ?: return@setPositiveButton
-
-                viewLifecycleOwner.lifecycleScope.launch {
-                    runCatching {
-                        deleteFriendBoth(me, friend.uid)
-                    }.onSuccess {
-                        toast("친구를 삭제했어")
-                    }.onFailure { e ->
-                        Log.e("FRIEND_DEL", "delete failed", e)
-                        toast("삭제 실패: ${e.message}")
-                    }
-                }
+                viewModel.deleteFriend(friend.uid)
             }
             .show()
-    }
-
-    /**
-     * friends/{me}/list/{other} + friends/{other}/list/{me} 양방향 삭제
-     */
-    private suspend fun deleteFriendBoth(meUid: String, otherUid: String) {
-        val myFriendRef = db.collection("friends")
-            .document(meUid)
-            .collection("list")
-            .document(otherUid)
-
-        val otherFriendRef = db.collection("friends")
-            .document(otherUid)
-            .collection("list")
-            .document(meUid)
-
-        val batch = db.batch()
-
-        batch.delete(myFriendRef)
-        batch.delete(otherFriendRef)
-
-        batch.commit().await()
     }
 
     private fun openFriendSearch() {
@@ -345,30 +191,8 @@ class FriendFragment : Fragment(R.layout.fragment_friend) {
             .commit()
     }
 
-    private fun getBadgeIdByLevel(level: Int): String {
-        return when (level) {
-            in 1..4 -> "bronze"
-            in 5..9 -> "silver"
-            in 10..14 -> "gold"
-            in 15..19 -> "platinum"
-            in 20..29 -> "master"
-            in 30..39 -> "grandmaster"
-            else -> "challenger"
-        }
-    }
-
     private fun toast(message: String) {
         Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
-    }
-
-    override fun onDestroyView() {
-        friendsListener?.remove()
-        friendsListener = null
-
-        requestCountListener?.remove()
-        requestCountListener = null
-
-        super.onDestroyView()
     }
 
     private fun openFriendRequests() {
