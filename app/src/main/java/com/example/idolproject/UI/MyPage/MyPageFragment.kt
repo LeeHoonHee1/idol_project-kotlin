@@ -2,7 +2,6 @@ package com.example.idolproject.UI.MyPage
 
 import android.app.AlertDialog
 import android.os.Bundle
-import android.util.Log
 import android.view.View
 import android.widget.EditText
 import android.widget.ImageButton
@@ -13,22 +12,17 @@ import android.widget.Toast
 import androidx.fragment.app.Fragment
 import com.example.idolproject.R
 import com.google.android.material.button.MaterialButton
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.DocumentReference
-import com.google.firebase.firestore.FieldValue
-import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.ListenerRegistration
+import androidx.fragment.app.viewModels
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
+import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
 
+@AndroidEntryPoint
 class MyPageFragment : Fragment(R.layout.fragment_mypage) {
 
-    private val auth by lazy { FirebaseAuth.getInstance() }
-    private val db by lazy { FirebaseFirestore.getInstance() }
-
-    private var userListener: ListenerRegistration? = null
-
-    // -----------------------------
-    // View
-    // -----------------------------
+    private val viewModel: MyPageViewModel by viewModels()
     private lateinit var ivProfileImage: ImageView
     private lateinit var tvNickname: TextView
     private lateinit var tvStatusMessage: TextView
@@ -90,16 +84,11 @@ class MyPageFragment : Fragment(R.layout.fragment_mypage) {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
         bindViews(view)
         setupClickListeners()
-        startUserProfileListener()
-    }
-
-    override fun onDestroyView() {
-        super.onDestroyView()
-        userListener?.remove()
-        userListener = null
+        observeMyPageUiState()
+        observeMyPageEvent()
+        viewModel.startObserveMyPage()
     }
 
     // -----------------------------
@@ -185,89 +174,76 @@ class MyPageFragment : Fragment(R.layout.fragment_mypage) {
         }
     }
 
+    private fun observeMyPageUiState() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.uiState.collect { uiState ->
+                    bindMyPageUi(uiState)
+                }
+            }
+        }
+    }
+
+    private fun observeMyPageEvent() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.event.collect { event ->
+                    when (event) {
+                        is MyPageEvent.ShowToast -> {
+                            toast(event.message)
+                        }
+
+                        is MyPageEvent.ShowNicknameInputError -> {
+                            toast(event.message)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private fun bindMyPageUi(uiState: MyPageUiState) {
+        tvNickname.text = uiState.nickname
+        tvStatusMessage.text = uiState.statusMessage
+
+        tvLevelValue.text = "Lv.${uiState.level}"
+        progressExp.max = 100
+        progressExp.progress = uiState.expProgress
+
+        val percent = ((uiState.expProgress * 100) / 100).coerceIn(0, 100)
+        tvExpValue.text = "EXP ${uiState.exp} / 100 (${percent}%)"
+
+        if (uiState.badgeResId != 0) {
+            ivLevelBadge.setImageResource(uiState.badgeResId)
+        } else {
+            ivLevelBadge.setImageResource(mapBadgeRes(uiState.badgeId))
+        }
+
+        updateBadgeCollection(uiState.level)
+
+        tvFavGroupValue.text = if (uiState.favoriteGroupId.isBlank()) {
+            "선택 안 함"
+        } else {
+            uiState.favoriteGroupName
+        }
+
+        btnSelectFavGroup.text = if (uiState.favoriteGroupId.isBlank()) {
+            "선택"
+        } else {
+            "변경"
+        }
+
+        tvPostCount.text = "작성 글: 0개"
+        tvCommentCount.text = "댓글: 0개"
+        tvLikeCount.text = "좋아요: 0개"
+        tvTotalAttendance.text = "총 출석: 0일"
+        tvStreakAttendance.text = "연속 출석: 0일"
+        tvFriendBadgeSummary.text = "친구 0명 · 대표 칭호: 없음"
+    }
+
     // -----------------------------
     // Firestore -> UI
     // -----------------------------
-    private fun startUserProfileListener() {
-        val uid = auth.currentUser?.uid
-
-        if (uid.isNullOrBlank()) {
-            toast("로그인이 필요해")
-            return
-        }
-
-        val userRef = db.collection("users").document(uid)
-
-        userListener?.remove()
-        userListener = userRef.addSnapshotListener { snap, e ->
-            if (e != null) {
-                Log.e("MYPAGE", "profile listener failed", e)
-                toast("프로필 로드 실패: ${e.message}")
-                return@addSnapshotListener
-            }
-
-            if (snap == null || !snap.exists()) {
-                toast("유저 문서가 없어. 회원가입 저장 로직 확인 필요")
-                return@addSnapshotListener
-            }
-
-            val nickname = snap.getString("nickname") ?: "닉네임 없음"
-            val status = snap.getString("statusMessage") ?: "상태메시지를 입력해 주세요."
-
-            val level = (snap.getLong("level") ?: 1L).toInt()
-            val exp = (snap.getLong("exp") ?: 0L).toInt()
-
-            val needExp = 100
-            val percent = ((exp * 100) / needExp).coerceIn(0, 100)
-
-            val badgeIdFromDb = snap.getString("badgeId").orEmpty()
-            val badgeIdByLevel = getBadgeIdByLevel(level)
-
-            // Firestore에 badgeId가 없거나 default면 level 기준으로 표시
-            val finalBadgeId = if (badgeIdFromDb.isBlank() || badgeIdFromDb == "default") {
-                badgeIdByLevel
-            } else {
-                badgeIdFromDb
-            }
-
-            tvNickname.text = nickname
-            tvStatusMessage.text = status
-
-            tvLevelValue.text = "Lv.$level"
-            progressExp.max = needExp
-            progressExp.progress = exp.coerceIn(0, needExp)
-            tvExpValue.text = "EXP $exp / $needExp ($percent%)"
-
-            ivLevelBadge.setImageResource(mapBadgeRes(finalBadgeId))
-
-            updateBadgeCollection(level)
-
-            // badgeId가 비어 있거나 level 기준과 다르면 Firestore도 보정
-            syncBadgeIdIfNeeded(uid, badgeIdFromDb, badgeIdByLevel)
-
-            val favoriteGroupId = snap.getString("favoriteGroupId").orEmpty()
-
-            tvFavGroupValue.text = if (favoriteGroupId.isBlank()) {
-                "선택 안 함"
-            } else {
-                groupDisplayMap[favoriteGroupId] ?: favoriteGroupId
-            }
-
-            btnSelectFavGroup.text = if (favoriteGroupId.isBlank()) {
-                "선택"
-            } else {
-                "변경"
-            }
-
-            // 아직 미연동이면 placeholder
-            tvPostCount.text = "작성 글: 0개"
-            tvCommentCount.text = "댓글: 0개"
-            tvLikeCount.text = "좋아요: 0개"
-            tvTotalAttendance.text = "총 출석: 0일"
-            tvStreakAttendance.text = "연속 출석: 0일"
-            tvFriendBadgeSummary.text = "친구 0명 · 대표 칭호: 없음"
-        }
-    }
 
     private fun updateBadgeCollection(level: Int) {
         val unlockedCount = getUnlockedBadgeCount(level)
@@ -321,22 +297,6 @@ class MyPageFragment : Fragment(R.layout.fragment_mypage) {
         }
     }
 
-    private fun syncBadgeIdIfNeeded(uid: String, currentBadgeId: String, correctBadgeId: String) {
-        if (currentBadgeId == correctBadgeId) return
-
-        db.collection("users")
-            .document(uid)
-            .update(
-                mapOf(
-                    "badgeId" to correctBadgeId,
-                    "updatedAt" to FieldValue.serverTimestamp()
-                )
-            )
-            .addOnFailureListener { e ->
-                Log.e("MYPAGE_BADGE", "badgeId sync failed", e)
-            }
-    }
-
     // -----------------------------
     // Badge
     // -----------------------------
@@ -369,11 +329,6 @@ class MyPageFragment : Fragment(R.layout.fragment_mypage) {
     // Nickname change dialog + transaction
     // -----------------------------
     private fun showChangeNicknameDialog() {
-        val uid = auth.currentUser?.uid ?: run {
-            toast("로그인이 필요해")
-            return
-        }
-
         val input = EditText(requireContext()).apply {
             setText(tvNickname.text?.toString().orEmpty())
             setSelection(text.length)
@@ -386,108 +341,15 @@ class MyPageFragment : Fragment(R.layout.fragment_mypage) {
             .setNegativeButton("취소", null)
             .setPositiveButton("저장") { _, _ ->
                 val newNickname = input.text.toString().trim()
-                val newKey = normalizeNicknameKey(newNickname)
-
-                if (!isValidNickname(newNickname)) {
-                    toast("닉네임은 2~12자, 공백 없이 입력해줘")
-                    return@setPositiveButton
-                }
-
-                changeNicknameTransaction(uid, newNickname, newKey)
+                viewModel.changeNickname(newNickname)
             }
             .show()
-    }
-
-    private fun changeNicknameTransaction(uid: String, newNickname: String, newKey: String) {
-        val userRef = db.collection("users").document(uid)
-        val newNickRef = db.collection("nicknames").document(newKey)
-
-        db.runTransaction { tx ->
-            // ---------- READ PHASE ----------
-            val userSnap = tx.get(userRef)
-            val oldKey = userSnap.getString("nicknameKey")?.trim().orEmpty()
-
-            if (oldKey == newKey) {
-                return@runTransaction null
-            }
-
-            val newNickSnap = tx.get(newNickRef)
-
-            if (newNickSnap.exists()) {
-                throw IllegalStateException("TAKEN")
-            }
-
-            var canDeleteOld = false
-            var oldNickRef: DocumentReference? = null
-
-            if (oldKey.isNotBlank()) {
-                oldNickRef = db.collection("nicknames").document(oldKey)
-                val oldSnap = tx.get(oldNickRef)
-                val reservedUid = oldSnap.getString("uid")
-                canDeleteOld = oldSnap.exists() && reservedUid == uid
-            }
-
-            // ---------- WRITE PHASE ----------
-            tx.set(
-                newNickRef,
-                hashMapOf(
-                    "uid" to uid,
-                    "nickname" to newNickname,
-                    "createdAt" to FieldValue.serverTimestamp()
-                )
-            )
-
-            tx.update(
-                userRef,
-                mapOf(
-                    "nickname" to newNickname,
-                    "nicknameKey" to newKey,
-                    "updatedAt" to FieldValue.serverTimestamp()
-                )
-            )
-
-            if (canDeleteOld) {
-                tx.delete(oldNickRef!!)
-            }
-
-            null
-        }.addOnSuccessListener {
-            toast("닉네임 변경 완료 ✅")
-        }.addOnFailureListener { e ->
-            Log.e("NICK_CHANGE", "changeNicknameTransaction failed", e)
-
-            if (e.message?.contains("TAKEN") == true) {
-                toast("이미 사용 중인 닉네임이야")
-            } else {
-                toast("닉네임 변경 실패: ${e.message}")
-            }
-        }
-    }
-
-    private fun isValidNickname(nickname: String): Boolean {
-        val n = nickname.trim()
-
-        if (n.length !in 2..12) return false
-        if (n.contains(" ")) return false
-
-        return true
-    }
-
-    private fun normalizeNicknameKey(nickname: String): String {
-        return nickname.trim()
-            .lowercase()
-            .replace("\\s+".toRegex(), "")
     }
 
     // -----------------------------
     // Favorite group
     // -----------------------------
     private fun showFavoriteGroupDialog() {
-        val uid = auth.currentUser?.uid ?: run {
-            toast("로그인이 필요해")
-            return
-        }
-
         val displayNames = groupMap.keys.toTypedArray()
 
         AlertDialog.Builder(requireContext())
@@ -495,51 +357,10 @@ class MyPageFragment : Fragment(R.layout.fragment_mypage) {
             .setItems(displayNames) { _, which ->
                 val selectedDisplayName = displayNames[which]
                 val selectedGroupId = groupMap[selectedDisplayName] ?: return@setItems
-
-                saveFavoriteGroup(uid, selectedGroupId)
+                viewModel.saveFavoriteGroup(selectedGroupId)
             }
             .setNegativeButton("취소", null)
             .show()
-    }
-
-    private fun saveFavoriteGroup(uid: String, newGroupId: String) {
-        val userRef = db.collection("users").document(uid)
-
-        db.runTransaction { tx ->
-            val userSnap = tx.get(userRef)
-            val oldGroupId = userSnap.getString("favoriteGroupId").orEmpty()
-
-            if (oldGroupId == newGroupId) {
-                return@runTransaction "same"
-            }
-
-            if (oldGroupId.isNotBlank()) {
-                val oldGroupRef = db.collection("groups").document(oldGroupId)
-                tx.update(oldGroupRef, "likeCount", FieldValue.increment(-1))
-            }
-
-            val newGroupRef = db.collection("groups").document(newGroupId)
-            tx.update(newGroupRef, "likeCount", FieldValue.increment(1))
-
-            tx.update(
-                userRef,
-                mapOf(
-                    "favoriteGroupId" to newGroupId,
-                    "updatedAt" to FieldValue.serverTimestamp()
-                )
-            )
-
-            "changed"
-        }.addOnSuccessListener { result ->
-            if (result == "same") {
-                toast("이미 선택한 그룹이야")
-            } else {
-                toast("최애 그룹이 저장됐어 ✅")
-            }
-        }.addOnFailureListener { e ->
-            Log.e("FAV_GROUP", "saveFavoriteGroup failed", e)
-            toast("최애 그룹 저장 실패: ${e.message}")
-        }
     }
 
     // -----------------------------
