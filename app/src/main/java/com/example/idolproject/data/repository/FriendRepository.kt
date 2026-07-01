@@ -81,6 +81,25 @@ class FriendRepository @Inject constructor() {
         }
     }
 
+    fun observeUncheckedPendingRequestCount(myUid: String): Flow<Int> = callbackFlow {
+        val listener = requestsCol
+            .whereEqualTo("receiverUid", myUid)
+            .whereEqualTo("status", FriendRequestStatus.PENDING.raw)
+            .whereEqualTo("checked", false)
+            .addSnapshotListener { snap, error ->
+                if (error != null) {
+                    close(error)
+                    return@addSnapshotListener
+                }
+
+                trySend(snap?.size() ?: 0)
+            }
+
+        awaitClose {
+            listener.remove()
+        }
+    }
+
     fun observeFriendRequests(myUid: String): Flow<List<FriendRequestItem>> = callbackFlow {
         val listener = requestsCol
             .whereEqualTo("receiverUid", myUid)

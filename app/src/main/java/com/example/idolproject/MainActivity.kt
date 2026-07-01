@@ -27,8 +27,6 @@ import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.navigation.NavigationView
 import android.view.Menu
 import com.example.idolproject.UI.Friend.FriendRequestsFragment
-import com.example.idolproject.UI.Friend.FriendRequestRepository
-import com.google.firebase.firestore.ListenerRegistration
 import android.util.Log
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -43,6 +41,13 @@ import android.app.NotificationManager
 import android.content.Intent
 import com.example.idolproject.Drawer.Community.GroupChatActivity
 import dagger.hilt.android.AndroidEntryPoint
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
+import com.example.idolproject.data.repository.FriendRepository
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelectedListener {
@@ -50,9 +55,11 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     private lateinit var drawerLayout: DrawerLayout
     private lateinit var navigationView: NavigationView
     private lateinit var bottomNavigationView: BottomNavigationView
-    private val friendRepo = FriendRequestRepository()
+    @Inject
+    lateinit var friendRepository: FriendRepository
+
     private val auth = FirebaseAuth.getInstance()
-    private var pendingListener: ListenerRegistration? = null
+    private var pendingCountJob: Job? = null
     private var pendingCount: Int = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -139,14 +146,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 onBackPressedDispatcher.onBackPressed()
             }
         }
-
-        val uid = auth.currentUser?.uid
-        if (uid != null) {
-            pendingListener = friendRepo.listenUncheckedPendingCount(uid) { count ->
-                pendingCount = count
-                invalidateOptionsMenu() // 빨간점 갱신
-            }
-        }
+        startUncheckedPendingCountObserver()
 
         createNotificationChannel()
         requestNotificationPermissionIfNeeded()
@@ -238,8 +238,22 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         }
     }
 
+    private fun startUncheckedPendingCountObserver() {
+        val uid = auth.currentUser?.uid ?: return
+
+        pendingCountJob?.cancel()
+        pendingCountJob = lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                friendRepository.observeUncheckedPendingRequestCount(uid).collect { count ->
+                    pendingCount = count
+                    invalidateOptionsMenu()
+                }
+            }
+        }
+    }
+
     override fun onDestroy() {
-        pendingListener?.remove()
+        pendingCountJob?.cancel()
         super.onDestroy()
     }
     // (옵션) 현재 프래그먼트 맨 위로 스크롤 – 나중에 ScrollToTop 인터페이스 연결용
