@@ -1,48 +1,45 @@
 package com.example.idolproject.Drawer.Group
 
+import android.app.DatePickerDialog
 import android.graphics.Color
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import androidx.fragment.app.Fragment
-import androidx.recyclerview.widget.LinearLayoutManager
-import com.example.idolproject.R
-import com.example.idolproject.databinding.FragmentGroupBinding
-import com.google.android.material.tabs.TabLayout
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.FieldValue
-import java.text.SimpleDateFormat
-import java.util.Locale
-import com.prolificinteractive.materialcalendarview.CalendarDay
-import com.prolificinteractive.materialcalendarview.MaterialCalendarView
-import java.time.LocalDate
-import android.widget.Toast
-import android.app.DatePickerDialog
 import android.widget.ArrayAdapter
 import android.widget.EditText
 import android.widget.Spinner
 import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
+import androidx.recyclerview.widget.LinearLayoutManager
+import com.example.idolproject.R
+import com.example.idolproject.databinding.FragmentGroupBinding
+import com.google.android.material.tabs.TabLayout
+import com.prolificinteractive.materialcalendarview.CalendarDay
+import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
 
+@AndroidEntryPoint
 class GroupFragment : Fragment(R.layout.fragment_group) {
 
     private var _binding: FragmentGroupBinding? = null
     private val binding get() = _binding!!
 
+    private val viewModel: GroupScheduleViewModel by viewModels()
+
     private lateinit var groupAdapter: GroupAdapter
 
-    private var selectedDate: CalendarDay? = null
-    private var selectedGroupId: String? = null
-    private var favoriteGroupIds: List<String> = emptyList()
-    private val db by lazy { FirebaseFirestore.getInstance() }
-    private var firestoreGroupScheduleItems: List<GroupScheduleItem> = emptyList()
+    private var latestUiState: GroupScheduleUiState = GroupScheduleUiState()
+    private var renderedFavoriteGroupIds: List<String> = emptyList()
 
-    private val groupScheduleItems: List<GroupScheduleItem>
-        get() = firestoreGroupScheduleItems
-
-    private var isAdmin = false
+    private val groupList = listOf("IVE", "NewJeans", "aespa", "LE SSERAFIM")
+    private val typeList = GroupActivityType.values().map { it.displayName }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -57,19 +54,111 @@ class GroupFragment : Fragment(R.layout.fragment_group) {
         super.onViewCreated(view, savedInstanceState)
 
         setupRecyclerView()
-        setupAdminAddButton()
         setupCalendar()
+        setupAdminAddButton()
+        observeGroupScheduleUiState()
+        observeGroupScheduleEvent()
 
-        loadFavoriteGroupsAndApply()
+        viewModel.start()
     }
 
-    private fun setupTabs() {
+    private fun setupRecyclerView() {
+        groupAdapter = GroupAdapter(emptyList()) { item ->
+            if (latestUiState.isAdmin) {
+                showGroupScheduleOptionsDialog(item)
+            }
+        }
+
+        binding.rvGroupSchedule.apply {
+            layoutManager = LinearLayoutManager(requireContext())
+            adapter = groupAdapter
+        }
+    }
+
+    private fun setupCalendar() {
+        val today = CalendarDay.today()
+
+        binding.calendarGroup.selectedDate = today
+
+        binding.calendarGroup.setOnDateChangedListener { _, date, _ ->
+            viewModel.selectDate(date)
+        }
+    }
+
+    private fun setupAdminAddButton() {
+        binding.fabAddGroupSchedule.visibility = View.GONE
+        binding.fabAddGroupSchedule.setOnClickListener {
+            showAddGroupScheduleDialog()
+        }
+    }
+
+    private fun observeGroupScheduleUiState() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.uiState.collect { uiState ->
+                    bindGroupScheduleUi(uiState)
+                }
+            }
+        }
+    }
+
+    private fun observeGroupScheduleEvent() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.event.collect { event ->
+                    when (event) {
+                        is GroupScheduleEvent.ShowToast -> {
+                            toast(event.message)
+                        }
+
+                        is GroupScheduleEvent.ScheduleAdded -> {
+                            binding.calendarGroup.selectedDate = event.item.date
+                        }
+
+                        is GroupScheduleEvent.ScheduleUpdated -> {
+                            binding.calendarGroup.selectedDate = event.item.date
+                        }
+
+                        GroupScheduleEvent.ScheduleDeleted -> {
+                            // 삭제 후 목록/캘린더는 Firestore snapshot → UiState 갱신으로 자동 반영
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private fun bindGroupScheduleUi(uiState: GroupScheduleUiState) {
+        latestUiState = uiState
+
+        if (renderedFavoriteGroupIds != uiState.favoriteGroupIds) {
+            renderedFavoriteGroupIds = uiState.favoriteGroupIds
+            setupTabs(uiState)
+        }
+
+        binding.fabAddGroupSchedule.visibility = if (uiState.isAdmin) {
+            View.VISIBLE
+        } else {
+            View.GONE
+        }
+
+        if (binding.calendarGroup.selectedDate != uiState.selectedDate) {
+            binding.calendarGroup.selectedDate = uiState.selectedDate
+        }
+
+        binding.tvGroupSelectedInfo.text = uiState.selectedDateInfoText
+        groupAdapter.submitList(uiState.selectedDateItems)
+
+        updateDecorators(uiState)
+    }
+
+    private fun setupTabs(uiState: GroupScheduleUiState) {
         val tabLayout = binding.tabGroupFilter
         tabLayout.removeAllTabs()
 
         tabLayout.addTab(tabLayout.newTab().setText("전체").setTag(null))
 
-        favoriteGroupIds.forEach { groupId ->
+        uiState.favoriteGroupIds.forEach { groupId ->
             tabLayout.addTab(
                 tabLayout.newTab()
                     .setText(getDisplayGroupName(groupId))
@@ -80,39 +169,23 @@ class GroupFragment : Fragment(R.layout.fragment_group) {
         tabLayout.clearOnTabSelectedListeners()
         tabLayout.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
             override fun onTabSelected(tab: TabLayout.Tab?) {
-                selectedGroupId = tab?.tag as? String
-                updateDecorators()
-
-                val currentDate = binding.calendarGroup.selectedDate ?: CalendarDay.today()
-                updateSelectedDateAndList(currentDate)
+                val selectedGroupId = tab?.tag as? String
+                viewModel.selectGroup(selectedGroupId)
             }
 
             override fun onTabUnselected(tab: TabLayout.Tab?) = Unit
             override fun onTabReselected(tab: TabLayout.Tab?) = Unit
         })
 
-        val selectedIndex = if (selectedGroupId == null) {
+        val selectedIndex = if (uiState.selectedGroupId == null) {
             0
         } else {
-            favoriteGroupIds.indexOf(selectedGroupId).let { index ->
+            uiState.favoriteGroupIds.indexOf(uiState.selectedGroupId).let { index ->
                 if (index >= 0) index + 1 else 0
             }
         }
 
         tabLayout.getTabAt(selectedIndex)?.select()
-    }
-
-    private fun setupRecyclerView() {
-        groupAdapter = GroupAdapter(emptyList()) { item ->
-            if (isAdmin) {
-                showGroupScheduleOptionsDialog(item)
-            }
-        }
-
-        binding.rvGroupSchedule.apply {
-            layoutManager = LinearLayoutManager(requireContext())
-            adapter = groupAdapter
-        }
     }
 
     private fun showGroupScheduleOptionsDialog(item: GroupScheduleItem) {
@@ -135,76 +208,13 @@ class GroupFragment : Fragment(R.layout.fragment_group) {
             .setTitle("그룹 일정 삭제")
             .setMessage("선택한 일정을 삭제할까요?")
             .setPositiveButton("삭제") { _, _ ->
-                deleteGroupScheduleFromFirestore(item)
+                viewModel.deleteGroupSchedule(item)
             }
             .setNegativeButton("취소", null)
             .show()
     }
 
-    private fun deleteGroupScheduleFromFirestore(item: GroupScheduleItem) {
-        if (item.id.isBlank()) {
-            Toast.makeText(requireContext(), "삭제할 일정 ID가 없습니다.", Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        db.collection("group_schedules")
-            .document(item.id)
-            .delete()
-            .addOnSuccessListener {
-                Toast.makeText(requireContext(), "일정이 삭제되었습니다.", Toast.LENGTH_SHORT).show()
-
-                loadGroupSchedulesFromFirestore {
-                    refreshGroupScheduleUiAfterDelete()
-                }
-            }
-            .addOnFailureListener { e ->
-                android.util.Log.e("GroupScheduleDelete", "delete failed. id=${item.id}", e)
-                Toast.makeText(
-                    requireContext(),
-                    "삭제 실패: ${e.message}",
-                    Toast.LENGTH_LONG
-                ).show()
-            }
-    }
-
-    private fun refreshGroupScheduleUiAfterDelete() {
-        val current = selectedDate ?: CalendarDay.today()
-        val visibleItems = getFilteredItemsForDate(current)
-
-        if (visibleItems.isNotEmpty()) {
-            updateDecorators()
-            updateSelectedDateAndList(current)
-            return
-        }
-
-        val nextDate = findFirstDateWithItems()
-        if (nextDate != null) {
-            selectedDate = nextDate
-            binding.calendarGroup.selectedDate = nextDate
-            updateDecorators()
-            updateSelectedDateAndList(nextDate)
-        } else {
-            selectedDate = current
-            updateDecorators()
-            updateSelectedDateAndList(current)
-        }
-    }
-
-    private fun getFilteredItemsForDate(date: CalendarDay): List<GroupScheduleItem> {
-        return groupScheduleItems.filter {
-            it.date == date && (selectedGroupId == null || it.groupId == selectedGroupId)
-        }
-    }
-
-    private fun findFirstDateWithItems(): CalendarDay? {
-        return groupScheduleItems
-            .filter { selectedGroupId == null || it.groupId == selectedGroupId }
-            .map { it.date }
-            .sortedWith(compareBy<CalendarDay>({ it.year }, { it.month }, { it.day }))
-            .firstOrNull()
-    }
-
-    private fun showEditGroupScheduleDialog(item: GroupScheduleItem) {
+    private fun showAddGroupScheduleDialog() {
         val dialogView = layoutInflater.inflate(R.layout.dialog_add_group_schedule, null)
 
         val spinnerGroup = dialogView.findViewById<Spinner>(R.id.spinner_group)
@@ -212,9 +222,6 @@ class GroupFragment : Fragment(R.layout.fragment_group) {
         val spinnerType = dialogView.findViewById<Spinner>(R.id.spinner_type)
         val etTitle = dialogView.findViewById<EditText>(R.id.et_title)
         val etMemo = dialogView.findViewById<EditText>(R.id.et_memo)
-
-        val groupList = listOf("IVE", "NewJeans", "aespa", "LE SSERAFIM")
-        val typeList = GroupActivityType.values().map { it.displayName }
 
         spinnerGroup.adapter = ArrayAdapter(
             requireContext(),
@@ -228,14 +235,94 @@ class GroupFragment : Fragment(R.layout.fragment_group) {
             typeList
         )
 
-        val selectedGroupName = when (item.groupId) {
-            "ive" -> "IVE"
-            "newjeans" -> "NewJeans"
-            "aespa" -> "aespa"
-            "lesserafim" -> "LE SSERAFIM"
-            else -> item.groupName
+        val initialDate = latestUiState.selectedDate
+        var selectedYear = initialDate.year
+        var selectedMonth = initialDate.month
+        var selectedDay = initialDate.day
+
+        tvSelectedDate.text = formatInputDate(selectedYear, selectedMonth, selectedDay)
+
+        tvSelectedDate.setOnClickListener {
+            DatePickerDialog(
+                requireContext(),
+                { _, year, month, dayOfMonth ->
+                    selectedYear = year
+                    selectedMonth = month + 1
+                    selectedDay = dayOfMonth
+                    tvSelectedDate.text = formatInputDate(selectedYear, selectedMonth, selectedDay)
+                },
+                selectedYear,
+                selectedMonth - 1,
+                selectedDay
+            ).show()
         }
 
+        val dialog = AlertDialog.Builder(requireContext())
+            .setTitle("그룹 일정 추가")
+            .setView(dialogView)
+            .setNegativeButton("취소", null)
+            .setPositiveButton("저장", null)
+            .create()
+
+        dialog.setOnShowListener {
+            val btnSave = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
+            btnSave.setOnClickListener {
+                val selectedGroupName = spinnerGroup.selectedItem.toString()
+                val selectedTypeDisplay = spinnerType.selectedItem.toString()
+                val title = etTitle.text.toString().trim()
+                val memo = etMemo.text.toString().trim()
+
+                if (title.isBlank()) {
+                    toast("제목을 입력하세요.")
+                    return@setOnClickListener
+                }
+
+                val selectedType = GroupActivityType.values().firstOrNull {
+                    it.displayName == selectedTypeDisplay
+                } ?: GroupActivityType.OTHER
+
+                val groupId = groupNameToId(selectedGroupName)
+                val selectedDate = CalendarDay.from(selectedYear, selectedMonth, selectedDay)
+
+                viewModel.addGroupSchedule(
+                    groupId = groupId,
+                    groupName = selectedGroupName,
+                    date = selectedDate,
+                    type = selectedType,
+                    title = title,
+                    memo = memo
+                )
+
+                dialog.dismiss()
+            }
+        }
+
+        dialog.show()
+        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+    }
+
+    private fun showEditGroupScheduleDialog(item: GroupScheduleItem) {
+        val dialogView = layoutInflater.inflate(R.layout.dialog_add_group_schedule, null)
+
+        val spinnerGroup = dialogView.findViewById<Spinner>(R.id.spinner_group)
+        val tvSelectedDate = dialogView.findViewById<TextView>(R.id.tv_selected_date)
+        val spinnerType = dialogView.findViewById<Spinner>(R.id.spinner_type)
+        val etTitle = dialogView.findViewById<EditText>(R.id.et_title)
+        val etMemo = dialogView.findViewById<EditText>(R.id.et_memo)
+
+        spinnerGroup.adapter = ArrayAdapter(
+            requireContext(),
+            android.R.layout.simple_spinner_dropdown_item,
+            groupList
+        )
+
+        spinnerType.adapter = ArrayAdapter(
+            requireContext(),
+            android.R.layout.simple_spinner_dropdown_item,
+            typeList
+        )
+
+        val selectedGroupName = getDisplayGroupName(item.groupId)
         val groupIndex = groupList.indexOf(selectedGroupName)
         if (groupIndex >= 0) spinnerGroup.setSelection(groupIndex)
 
@@ -246,12 +333,7 @@ class GroupFragment : Fragment(R.layout.fragment_group) {
         var selectedMonth = item.date.month
         var selectedDay = item.date.day
 
-        tvSelectedDate.text = String.format(
-            "%04d-%02d-%02d",
-            selectedYear,
-            selectedMonth,
-            selectedDay
-        )
+        tvSelectedDate.text = formatInputDate(selectedYear, selectedMonth, selectedDay)
 
         tvSelectedDate.setOnClickListener {
             DatePickerDialog(
@@ -260,12 +342,7 @@ class GroupFragment : Fragment(R.layout.fragment_group) {
                     selectedYear = year
                     selectedMonth = month + 1
                     selectedDay = dayOfMonth
-                    tvSelectedDate.text = String.format(
-                        "%04d-%02d-%02d",
-                        selectedYear,
-                        selectedMonth,
-                        selectedDay
-                    )
+                    tvSelectedDate.text = formatInputDate(selectedYear, selectedMonth, selectedDay)
                 },
                 selectedYear,
                 selectedMonth - 1,
@@ -292,17 +369,11 @@ class GroupFragment : Fragment(R.layout.fragment_group) {
                 val memo = etMemo.text.toString().trim()
 
                 if (title.isBlank()) {
-                    Toast.makeText(requireContext(), "제목을 입력하세요.", Toast.LENGTH_SHORT).show()
+                    toast("제목을 입력하세요.")
                     return@setOnClickListener
                 }
 
-                val newGroupId = when (newGroupName) {
-                    "IVE" -> "ive"
-                    "NewJeans" -> "newjeans"
-                    "aespa" -> "aespa"
-                    "LE SSERAFIM" -> "lesserafim"
-                    else -> newGroupName.lowercase()
-                }
+                val newGroupId = groupNameToId(newGroupName)
 
                 val newType = GroupActivityType.values().firstOrNull {
                     it.displayName == selectedTypeDisplay
@@ -317,7 +388,9 @@ class GroupFragment : Fragment(R.layout.fragment_group) {
                     memo = memo
                 )
 
-                updateGroupScheduleInFirestore(updatedItem, dialog)
+                viewModel.updateGroupSchedule(updatedItem)
+
+                dialog.dismiss()
             }
         }
 
@@ -325,113 +398,11 @@ class GroupFragment : Fragment(R.layout.fragment_group) {
         dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
     }
 
-    private fun updateGroupScheduleInFirestore(
-        item: GroupScheduleItem,
-        dialog: AlertDialog? = null
-    ) {
-        if (item.id.isBlank()) {
-            Toast.makeText(requireContext(), "수정할 일정 ID가 없습니다.", Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        val data = hashMapOf(
-            "id" to item.id,
-            "groupId" to item.groupId,
-            "groupName" to item.groupName,
-            "date" to calendarDayToString(item.date),
-            "type" to item.type.name,
-            "title" to item.title,
-            "memo" to item.memo,
-            "createdBy" to "test_admin"
-        )
-
-        db.collection("group_schedules")
-            .document(item.id)
-            .set(data)
-            .addOnSuccessListener {
-                Toast.makeText(requireContext(), "일정이 수정되었습니다.", Toast.LENGTH_SHORT).show()
-
-                loadGroupSchedulesFromFirestore {
-                    selectedDate = item.date
-                    binding.calendarGroup.selectedDate = item.date
-                    updateDecorators()
-                    updateSelectedDateAndList(item.date)
-                    dialog?.dismiss()
-                }
-            }
-            .addOnFailureListener { e ->
-                Toast.makeText(requireContext(), "수정 실패: ${e.message}", Toast.LENGTH_LONG).show()
-            }
-    }
-
-    private fun setupCalendar() {
-        val calendar: MaterialCalendarView = binding.calendarGroup
-
-        val today = CalendarDay.today()
-        selectedDate = today
-        calendar.selectedDate = today
-
-        updateDecorators()
-        updateSelectedDateAndList(today)
-
-        calendar.setOnDateChangedListener { _, date, _ ->
-            selectedDate = date
-            updateSelectedDateAndList(date)
-        }
-    }
-
-    private fun getGroupScheduleMap(): Map<String, List<GroupScheduleItem>> {
-        return groupScheduleItems.groupBy { item ->
-            item.date.toKey()
-        }
-    }
-
-    private fun updateSelectedDateAndList(selected: CalendarDay) {
-        val key = selected.toKey()
-        val allItemsForDate = getGroupScheduleMap()[key].orEmpty()
-
-        val filtered = selectedGroupId?.let { groupId ->
-            allItemsForDate.filter { it.groupId == groupId }
-        } ?: allItemsForDate
-
-        val dateText = formatDisplayDate(selected)
-        val groupLabel = getDisplayGroupName(selectedGroupId)
-
-        binding.tvGroupSelectedInfo.text = if (filtered.isEmpty()) {
-            "$groupLabel · $dateText · 등록된 일정이 없어요"
-        } else {
-            "$groupLabel · $dateText · 일정 ${filtered.size}건"
-        }
-
-        groupAdapter.submitList(filtered)
-    }
-
-    private fun getDisplayGroupName(groupId: String?): String {
-        return when (groupId) {
-            null -> "전체"
-            "ive" -> "IVE"
-            "newjeans" -> "NewJeans"
-            "lesserafim" -> "LE SSERAFIM"
-            "aespa" -> "aespa"
-            else -> groupId
-        }
-    }
-
-    private fun getColorForType(type: GroupActivityType): Int {
-        return when (type) {
-            GroupActivityType.FAN_SIGN -> Color.parseColor("#F06292")
-            GroupActivityType.VARIETY -> Color.parseColor("#7E57C2")
-            GroupActivityType.RADIO -> Color.parseColor("#42A5F5")
-            GroupActivityType.MUSIC_SHOW -> Color.parseColor("#26A69A")
-            GroupActivityType.OTHER -> Color.parseColor("#9E9E9E")
-        }
-    }
-
-    private fun updateDecorators() {
+    private fun updateDecorators(uiState: GroupScheduleUiState) {
         binding.calendarGroup.removeDecorators()
 
-        val filteredItems = groupScheduleItems.filter {
-            selectedGroupId == null || it.groupId == selectedGroupId
+        val filteredItems = uiState.schedules.filter {
+            uiState.selectedGroupId == null || it.groupId == uiState.selectedGroupId
         }
 
         val groupedByDate = filteredItems.groupBy { it.date }
@@ -450,302 +421,49 @@ class GroupFragment : Fragment(R.layout.fragment_group) {
         }
     }
 
-    private fun CalendarDay.toKey(): String {
+    private fun getDisplayGroupName(groupId: String?): String {
+        return when (groupId) {
+            null -> "전체"
+            "ive" -> "IVE"
+            "newjeans" -> "NewJeans"
+            "lesserafim" -> "LE SSERAFIM"
+            "aespa" -> "aespa"
+            "babymonster" -> "BABYMONSTER"
+            else -> groupId
+        }
+    }
+
+    private fun groupNameToId(groupName: String): String {
+        return when (groupName) {
+            "IVE" -> "ive"
+            "NewJeans" -> "newjeans"
+            "aespa" -> "aespa"
+            "LE SSERAFIM" -> "lesserafim"
+            "BABYMONSTER" -> "babymonster"
+            else -> groupName.lowercase()
+        }
+    }
+
+    private fun getColorForType(type: GroupActivityType): Int {
+        return when (type) {
+            GroupActivityType.FAN_SIGN -> Color.parseColor("#F06292")
+            GroupActivityType.VARIETY -> Color.parseColor("#7E57C2")
+            GroupActivityType.RADIO -> Color.parseColor("#42A5F5")
+            GroupActivityType.MUSIC_SHOW -> Color.parseColor("#26A69A")
+            GroupActivityType.OTHER -> Color.parseColor("#9E9E9E")
+        }
+    }
+
+    private fun formatInputDate(year: Int, month: Int, day: Int): String {
         return String.format("%04d-%02d-%02d", year, month, day)
     }
 
-    private fun formatDisplayDate(date: CalendarDay): String {
-        return String.format("%04d.%02d.%02d", date.year, date.month, date.day)
-    }
-
-    private fun CalendarDay.plusDays(days: Long): CalendarDay {
-        val base = LocalDate.of(year, month, day).plusDays(days)
-        return CalendarDay.from(base.year, base.monthValue, base.dayOfMonth)
-    }
-
-    private fun CalendarDay.minusDays(days: Long): CalendarDay {
-        val base = LocalDate.of(year, month, day).minusDays(days)
-        return CalendarDay.from(base.year, base.monthValue, base.dayOfMonth)
+    private fun toast(message: String) {
+        Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null
-    }
-
-    private fun loadFavoriteGroupsAndApply() {
-        val uid = FirebaseAuth.getInstance().currentUser?.uid ?: run {
-            favoriteGroupIds = emptyList()
-            selectedGroupId = null
-            setupTabs()
-
-            loadGroupSchedulesFromFirestore {
-                updateDecorators()
-                val currentDate = binding.calendarGroup.selectedDate ?: CalendarDay.today()
-                updateSelectedDateAndList(currentDate)
-            }
-            return
-        }
-
-        FirebaseFirestore.getInstance()
-            .collection("users")
-            .document(uid)
-            .get()
-            .addOnSuccessListener { document ->
-                favoriteGroupIds =
-                    document.getString("favoriteGroupId")?.let { listOf(it) }.orEmpty()
-
-                selectedGroupId = null
-                setupTabs()
-
-                loadGroupSchedulesFromFirestore {
-                    updateDecorators()
-                    val currentDate = binding.calendarGroup.selectedDate ?: CalendarDay.today()
-                    updateSelectedDateAndList(currentDate)
-                }
-            }
-            .addOnFailureListener {
-                favoriteGroupIds = emptyList()
-                selectedGroupId = null
-                setupTabs()
-
-                loadGroupSchedulesFromFirestore {
-                    updateDecorators()
-                    val currentDate = binding.calendarGroup.selectedDate ?: CalendarDay.today()
-                    updateSelectedDateAndList(currentDate)
-                }
-            }
-    }
-
-    private fun setupAdminAddButton() {
-        binding.fabAddGroupSchedule.visibility = View.GONE
-        binding.fabAddGroupSchedule.setOnClickListener(null)
-
-        val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
-
-        db.collection("users")
-            .document(uid)
-            .get()
-            .addOnSuccessListener { document ->
-                isAdmin = document.getString("role") == "admin"
-
-                binding.fabAddGroupSchedule.visibility =
-                    if (isAdmin) View.VISIBLE else View.GONE
-
-                if (isAdmin) {
-                    binding.fabAddGroupSchedule.setOnClickListener {
-                        showAddGroupScheduleDialog()
-                    }
-                } else {
-                    binding.fabAddGroupSchedule.setOnClickListener(null)
-                }
-            }
-            .addOnFailureListener {
-                isAdmin = false
-                binding.fabAddGroupSchedule.visibility = View.GONE
-                binding.fabAddGroupSchedule.setOnClickListener(null)
-            }
-    }
-
-    private fun showAddGroupScheduleDialog() {
-        val dialogView = layoutInflater.inflate(R.layout.dialog_add_group_schedule, null)
-
-        val spinnerGroup = dialogView.findViewById<Spinner>(R.id.spinner_group)
-        val tvSelectedDate = dialogView.findViewById<TextView>(R.id.tv_selected_date)
-        val spinnerType = dialogView.findViewById<Spinner>(R.id.spinner_type)
-        val etTitle = dialogView.findViewById<EditText>(R.id.et_title)
-        val etMemo = dialogView.findViewById<EditText>(R.id.et_memo)
-
-        val groupList = listOf("IVE", "NewJeans", "aespa", "LE SSERAFIM")
-        val typeList = GroupActivityType.values().map { it.displayName }
-
-        spinnerGroup.adapter = ArrayAdapter(
-            requireContext(),
-            android.R.layout.simple_spinner_dropdown_item,
-            groupList
-        )
-
-        spinnerType.adapter = ArrayAdapter(
-            requireContext(),
-            android.R.layout.simple_spinner_dropdown_item,
-            typeList
-        )
-
-        val initialDate = selectedDate ?: CalendarDay.today()
-        var selectedYear = initialDate.year
-        var selectedMonth = initialDate.month
-        var selectedDay = initialDate.day
-
-        tvSelectedDate.text = String.format(
-            "%04d-%02d-%02d",
-            selectedYear,
-            selectedMonth,
-            selectedDay
-        )
-
-        tvSelectedDate.setOnClickListener {
-            DatePickerDialog(
-                requireContext(),
-                { _, year, month, dayOfMonth ->
-                    selectedYear = year
-                    selectedMonth = month + 1
-                    selectedDay = dayOfMonth
-                    tvSelectedDate.text = String.format(
-                        "%04d-%02d-%02d",
-                        selectedYear,
-                        selectedMonth,
-                        selectedDay
-                    )
-                },
-                selectedYear,
-                selectedMonth - 1,
-                selectedDay
-            ).show()
-        }
-
-        val dialog = AlertDialog.Builder(requireContext())
-            .setTitle("그룹 일정 추가")
-            .setView(dialogView)
-            .setNegativeButton("취소", null)
-            .setPositiveButton("저장", null)
-            .create()
-
-        dialog.setOnShowListener {
-            val btnSave = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
-            btnSave.setOnClickListener {
-                val selectedGroupName = spinnerGroup.selectedItem.toString()
-                val selectedTypeDisplay = spinnerType.selectedItem.toString()
-                val title = etTitle.text.toString().trim()
-                val memo = etMemo.text.toString().trim()
-
-                if (title.isBlank()) {
-                    Toast.makeText(requireContext(), "제목을 입력하세요.", Toast.LENGTH_SHORT).show()
-                    return@setOnClickListener
-                }
-
-                val selectedType = GroupActivityType.values().firstOrNull {
-                    it.displayName == selectedTypeDisplay
-                } ?: GroupActivityType.OTHER
-
-                val groupId = when (selectedGroupName) {
-                    "IVE" -> "ive"
-                    "NewJeans" -> "newjeans"
-                    "aespa" -> "aespa"
-                    "LE SSERAFIM" -> "lesserafim"
-                    else -> selectedGroupName.lowercase()
-                }
-
-                val selectedDate = CalendarDay.from(selectedYear, selectedMonth, selectedDay)
-
-                saveGroupScheduleToFirestore(
-                    groupId = groupId,
-                    groupName = selectedGroupName,
-                    date = selectedDate,
-                    type = selectedType,
-                    title = title,
-                    memo = memo
-                ) {
-                    Toast.makeText(requireContext(), "일정이 추가되었습니다.", Toast.LENGTH_SHORT).show()
-                    loadGroupSchedulesFromFirestore {
-                        refreshScheduleUIAfterAdd(
-                            GroupScheduleItem(
-                                id = "",
-                                groupId = groupId,
-                                groupName = selectedGroupName,
-                                date = selectedDate,
-                                type = selectedType,
-                                title = title,
-                                memo = memo
-                            )
-                        )
-                    }
-                    dialog.dismiss()
-                }
-            }
-        }
-
-        dialog.show()
-        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
-    }
-
-    private fun refreshScheduleUIAfterAdd(newItem: GroupScheduleItem) {
-        selectedDate = newItem.date
-        binding.calendarGroup.selectedDate = newItem.date
-        updateDecorators()
-        updateSelectedDateAndList(newItem.date)
-    }
-
-    private fun calendarDayToString(day: CalendarDay): String {
-        return String.format("%04d-%02d-%02d", day.year, day.month, day.day)
-    }
-
-    private fun stringToCalendarDay(date: String): CalendarDay {
-        val parts = date.split("-")
-        return CalendarDay.from(
-            parts[0].toInt(),
-            parts[1].toInt(),
-            parts[2].toInt()
-        )
-    }
-
-    private fun saveGroupScheduleToFirestore(
-        groupId: String,
-        groupName: String,
-        date: CalendarDay,
-        type: GroupActivityType,
-        title: String,
-        memo: String,
-        onSuccess: () -> Unit
-    ) {
-        val docRef = db.collection("group_schedules").document()
-
-        val data = hashMapOf(
-            "id" to docRef.id,
-            "groupId" to groupId,
-            "groupName" to groupName,
-            "date" to calendarDayToString(date),
-            "type" to type.name,
-            "title" to title,
-            "memo" to memo,
-            "createdBy" to "test_admin",
-            "createdAt" to FieldValue.serverTimestamp()
-        )
-
-        docRef.set(data)
-            .addOnSuccessListener {
-                onSuccess()
-            }
-            .addOnFailureListener {
-                Toast.makeText(requireContext(), "저장 실패", Toast.LENGTH_SHORT).show()
-            }
-    }
-    private fun loadGroupSchedulesFromFirestore(onComplete: (() -> Unit)? = null) {
-        db.collection("group_schedules")
-            .get()
-            .addOnSuccessListener { result ->
-                firestoreGroupScheduleItems = result.documents.mapNotNull { doc ->
-                    try {
-                        val dateString = doc.getString("date") ?: return@mapNotNull null
-                        val typeString = doc.getString("type") ?: GroupActivityType.OTHER.name
-
-                        GroupScheduleItem(
-                            id = doc.getString("id") ?: doc.id,
-                            groupId = doc.getString("groupId") ?: "",
-                            groupName = doc.getString("groupName") ?: "",
-                            date = stringToCalendarDay(dateString),
-                            type = runCatching { GroupActivityType.valueOf(typeString) }
-                                .getOrDefault(GroupActivityType.OTHER),
-                            title = doc.getString("title") ?: "",
-                            memo = doc.getString("memo") ?: ""
-                        )
-                    } catch (e: Exception) {
-                        null
-                    }
-                }
-                onComplete?.invoke()
-            }
-            .addOnFailureListener {
-                Toast.makeText(requireContext(), "일정 불러오기 실패", Toast.LENGTH_SHORT).show()
-            }
     }
 }
