@@ -6,164 +6,118 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.idolproject.R
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.ListenerRegistration
-import com.example.idolproject.Drawer.Community.GroupChatActivity
+import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
 
+@AndroidEntryPoint
 class CommunityFragment : Fragment(R.layout.fragment_community_room_list) {
+
+    private val viewModel: CommunityViewModel by viewModels()
 
     private lateinit var rvChatRooms: RecyclerView
     private lateinit var tvDescription: TextView
     private lateinit var adapter: ChatRoomAdapter
+
     private val roomList = mutableListOf<ChatRoom>()
-
-    private val auth by lazy { FirebaseAuth.getInstance() }
-    private val db by lazy { FirebaseFirestore.getInstance() }
-
-    private var roomListener: ListenerRegistration? = null
-    private var memberListener: ListenerRegistration? = null
-    private var unreadListener: ListenerRegistration? = null
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        bindViews(view)
+        setupRecyclerView()
+        observeCommunityUiState()
+        observeCommunityEvent()
+
+        (activity as? AppCompatActivity)?.supportActionBar?.title = "커뮤니티"
+
+        viewModel.start()
+    }
+
+    private fun bindViews(view: View) {
         rvChatRooms = view.findViewById(R.id.rv_chat_rooms)
         tvDescription = view.findViewById(R.id.tv_community_description)
+    }
 
+    private fun setupRecyclerView() {
         adapter = ChatRoomAdapter(roomList) { room ->
-            openChatRoom(room)
+            viewModel.openChatRoom(room)
         }
 
         rvChatRooms.layoutManager = LinearLayoutManager(requireContext())
         rvChatRooms.adapter = adapter
-
-        loadMyFavoriteGroupAndStartListening()
-
-        (activity as? AppCompatActivity)?.supportActionBar?.title = "커뮤니티"
     }
 
-    private fun loadMyFavoriteGroupAndStartListening() {
-        val uid = auth.currentUser?.uid ?: return
-
-        db.collection("users")
-            .document(uid)
-            .get()
-            .addOnSuccessListener { userSnap ->
-                val favoriteGroupId = userSnap.getString("favoriteGroupId").orEmpty()
-                val favoriteGroupName = userSnap.getString("favoriteGroupName").orEmpty()
-
-                if (favoriteGroupId.isBlank()) {
-                    roomList.clear()
-                    tvDescription.text = "내 페이지에서 최애 그룹을 먼저 설정해 주세요."
-                    adapter.notifyDataSetChanged()
-                    stopRoomListeners()
-                    return@addOnSuccessListener
+    private fun observeCommunityUiState() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.uiState.collect { uiState ->
+                    bindCommunityUi(uiState)
                 }
-
-                tvDescription.text = "내 최애 그룹 기준으로 팬톡방이 표시돼요."
-                startRoomListeners(favoriteGroupId, favoriteGroupName)
             }
-            .addOnFailureListener {
-                Toast.makeText(requireContext(), "최애 그룹 정보를 불러오지 못했습니다.", Toast.LENGTH_SHORT).show()
-            }
+        }
     }
 
-    private fun startRoomListeners(groupId: String, groupName: String) {
-        val uid = auth.currentUser?.uid ?: return
-        val roomRef = db.collection("group_chats").document(groupId)
-        val memberRef = roomRef.collection("members").document(uid)
+    private fun observeCommunityEvent() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.event.collect { event ->
+                    when (event) {
+                        is CommunityEvent.ShowToast -> {
+                            Toast.makeText(
+                                requireContext(),
+                                event.message,
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
 
-        stopRoomListeners()
-
-        updateSingleRoom(
-            ChatRoom(
-                id = groupId,
-                groupName = groupName.ifBlank { groupId },
-                roomName = "${groupName.ifBlank { groupId }} 팬톡방",
-                lastMessage = "팬들과 실시간으로 대화해 보세요.",
-                unreadCount = 0,
-                imageResId = R.drawable.person_24dp,
-                lastMessageAt = 0L
-            )
-        )
-
-        roomListener = roomRef.addSnapshotListener { roomSnap, e ->
-            if (e != null || roomSnap == null) return@addSnapshotListener
-
-            val current = roomList.firstOrNull() ?: return@addSnapshotListener
-
-            val updated = current.copy(
-                groupName = roomSnap.getString("groupName").orEmpty().ifBlank { current.groupName },
-                roomName = roomSnap.getString("roomName").orEmpty().ifBlank { current.roomName },
-                lastMessage = roomSnap.getString("lastMessage").orEmpty().ifBlank { current.lastMessage },
-                lastMessageAt = roomSnap.getLong("lastMessageAt") ?: current.lastMessageAt
-            )
-
-            updateSingleRoom(updated)
-        }
-
-        memberListener = memberRef.addSnapshotListener { memberSnap, e ->
-            if (e != null) return@addSnapshotListener
-
-            val lastReadAt = memberSnap?.getLong("lastReadAt") ?: 0L
-
-            unreadListener?.remove()
-            unreadListener = roomRef.collection("messages")
-                .whereGreaterThan("timestamp", lastReadAt)
-                .addSnapshotListener { msgSnap, err ->
-                    if (err != null || msgSnap == null) return@addSnapshotListener
-
-                    val unreadCount = msgSnap.documents.count { doc ->
-                        doc.getString("senderUid").orEmpty() != uid
+                        is CommunityEvent.OpenChatRoom -> {
+                            openChatRoom(
+                                roomId = event.roomId,
+                                roomName = event.roomName
+                            )
+                        }
                     }
-
-                    val current = roomList.firstOrNull() ?: return@addSnapshotListener
-                    val displayUnread = if (unreadCount > 99) 99 else unreadCount
-                    val updated = current.copy(unreadCount = displayUnread)
-
-                    updateSingleRoom(updated)
                 }
+            }
         }
     }
 
-    private fun updateSingleRoom(room: ChatRoom) {
+    private fun bindCommunityUi(uiState: CommunityUiState) {
+        tvDescription.text = uiState.descriptionText
+
         roomList.clear()
-        roomList.add(room)
+        roomList.addAll(uiState.chatRooms)
         adapter.notifyDataSetChanged()
+
+        rvChatRooms.visibility = if (uiState.chatRooms.isEmpty()) {
+            View.GONE
+        } else {
+            View.VISIBLE
+        }
     }
 
-    private fun stopRoomListeners() {
-        roomListener?.remove()
-        roomListener = null
-
-        memberListener?.remove()
-        memberListener = null
-
-        unreadListener?.remove()
-        unreadListener = null
-    }
-
-    private fun openChatRoom(room: ChatRoom) {
+    private fun openChatRoom(
+        roomId: String,
+        roomName: String
+    ) {
         startActivity(
             GroupChatActivity.newIntent(
                 requireContext(),
-                room.id,
-                room.roomName
+                roomId,
+                roomName
             )
         )
     }
 
     override fun onResume() {
         super.onResume()
-        loadMyFavoriteGroupAndStartListening()
-    }
-
-    override fun onDestroyView() {
-        super.onDestroyView()
-        stopRoomListeners()
+        viewModel.refresh()
     }
 }
