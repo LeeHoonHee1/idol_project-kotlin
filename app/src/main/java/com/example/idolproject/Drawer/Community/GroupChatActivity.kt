@@ -3,36 +3,44 @@ package com.example.idolproject.Drawer.Community
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.text.Editable
+import android.text.TextWatcher
 import android.view.View
 import android.widget.EditText
 import android.widget.ImageButton
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.updatePadding
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.idolproject.R
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.ListenerRegistration
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.updatePadding
-import androidx.core.view.WindowInsetsCompat.Type
-import androidx.core.view.WindowCompat
+import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
 
+@AndroidEntryPoint
 class GroupChatActivity : AppCompatActivity() {
+
+    private val viewModel: GroupChatViewModel by viewModels()
 
     private lateinit var rvChatMessages: RecyclerView
     private lateinit var adapter: ChatMessageAdapter
     private val messageList = mutableListOf<ChatMessage>()
 
+    private lateinit var etMessage: EditText
+    private lateinit var btnSend: ImageButton
+    private lateinit var tvChatRoomTitle: TextView
+    private lateinit var layoutChatInput: View
+
     private var roomId: String? = null
     private var roomName: String? = null
-
-    private val auth by lazy { FirebaseAuth.getInstance() }
-    private val db by lazy { FirebaseFirestore.getInstance() }
-    private var messageListener: ListenerRegistration? = null
 
     private val PREF_CHAT_STATE = "chat_state"
     private val KEY_OPEN_ROOM_ID = "current_open_chat_room_id"
@@ -42,19 +50,34 @@ class GroupChatActivity : AppCompatActivity() {
         setContentView(R.layout.fragment_community_chat)
 
         WindowCompat.setDecorFitsSystemWindows(window, false)
-        WindowCompat.getInsetsController(window, window.decorView)?.isAppearanceLightStatusBars = true
+        WindowCompat.getInsetsController(window, window.decorView)
+            ?.isAppearanceLightStatusBars = true
 
         roomId = intent.getStringExtra(EXTRA_ROOM_ID)
         roomName = intent.getStringExtra(EXTRA_ROOM_NAME)
 
+        bindViews()
+        setupInsets()
+        setupRecyclerView()
+        setupInput()
+        observeChatUiState()
+        observeChatEvent()
+
+        viewModel.start(
+            roomId = roomId,
+            roomName = roomName
+        )
+    }
+
+    private fun bindViews() {
         rvChatMessages = findViewById(R.id.rv_chat_messages)
-        val etMessage: EditText = findViewById(R.id.et_message)
-        val btnSend: ImageButton = findViewById(R.id.btn_send)
-        val tvChatRoomTitle: TextView = findViewById(R.id.tvChatRoomTitle)
-        val layoutChatInput: View = findViewById(R.id.layout_chat_input)
+        etMessage = findViewById(R.id.et_message)
+        btnSend = findViewById(R.id.btn_send)
+        tvChatRoomTitle = findViewById(R.id.tvChatRoomTitle)
+        layoutChatInput = findViewById(R.id.layout_chat_input)
+    }
 
-        tvChatRoomTitle.text = roomName ?: "채팅방"
-
+    private fun setupInsets() {
         ViewCompat.setOnApplyWindowInsetsListener(tvChatRoomTitle) { view, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             view.updatePadding(
@@ -81,8 +104,6 @@ class GroupChatActivity : AppCompatActivity() {
         }
 
         ViewCompat.setOnApplyWindowInsetsListener(rvChatMessages) { view, insets ->
-            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-
             view.updatePadding(
                 left = view.paddingLeft,
                 top = view.paddingTop,
@@ -91,147 +112,102 @@ class GroupChatActivity : AppCompatActivity() {
             )
             insets
         }
+    }
 
-
+    private fun setupRecyclerView() {
         adapter = ChatMessageAdapter(messageList)
+
         rvChatMessages.layoutManager = LinearLayoutManager(this).apply {
             stackFromEnd = true
         }
-        rvChatMessages.adapter = adapter
 
-        listenMessages()
+        rvChatMessages.adapter = adapter
+    }
+
+    private fun setupInput() {
+        btnSend.isEnabled = false
+
+        etMessage.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(
+                s: CharSequence?,
+                start: Int,
+                count: Int,
+                after: Int
+            ) = Unit
+
+            override fun onTextChanged(
+                s: CharSequence?,
+                start: Int,
+                before: Int,
+                count: Int
+            ) {
+                viewModel.onInputChanged(s?.toString().orEmpty())
+            }
+
+            override fun afterTextChanged(s: Editable?) = Unit
+        })
 
         btnSend.setOnClickListener {
-            val text = etMessage.text.toString().trim()
-            if (text.isEmpty()) return@setOnClickListener
-
-            sendMessage(text)
-            etMessage.text.clear()
+            viewModel.sendCurrentMessage()
         }
     }
 
-    private fun listenMessages() {
-        val currentRoomId = roomId ?: return
-        val myUid = auth.currentUser?.uid ?: return
-
-        messageListener?.remove()
-        messageListener = db.collection("group_chats")
-            .document(currentRoomId)
-            .collection("messages")
-            .orderBy("timestamp")
-            .addSnapshotListener { snapshots, e ->
-                if (e != null) {
-                    Toast.makeText(this, "메시지를 불러오지 못했습니다.", Toast.LENGTH_SHORT).show()
-                    return@addSnapshotListener
+    private fun observeChatUiState() {
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.uiState.collect { uiState ->
+                    bindChatUi(uiState)
                 }
-
-                val newList = mutableListOf<ChatMessage>()
-
-                snapshots?.documents?.forEach { doc ->
-                    val senderUid = doc.getString("senderUid").orEmpty()
-
-                    val item = ChatMessage(
-                        id = doc.getString("id").orEmpty(),
-                        roomId = doc.getString("roomId").orEmpty(),
-                        senderUid = senderUid,
-                        senderName = doc.getString("senderName").orEmpty(),
-                        message = doc.getString("message").orEmpty(),
-                        timestamp = doc.getLong("timestamp") ?: 0L,
-                        isMe = senderUid == myUid
-                    )
-                    newList.add(item)
-                }
-
-                messageList.clear()
-                messageList.addAll(newList)
-                adapter.notifyDataSetChanged()
-
-                if (messageList.isNotEmpty()) {
-                    rvChatMessages.scrollToPosition(messageList.size - 1)
-                }
-
-                markAsRead()
             }
+        }
     }
 
-    private fun sendMessage(text: String) {
-        val currentRoomId = roomId ?: return
-        val user = auth.currentUser ?: return
+    private fun observeChatEvent() {
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.event.collect { event ->
+                    when (event) {
+                        is ChatEvent.ShowToast -> {
+                            Toast.makeText(
+                                this@GroupChatActivity,
+                                event.message,
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
 
-        db.collection("users")
-            .document(user.uid)
-            .get()
-            .addOnSuccessListener { userSnap ->
-                val nickname = userSnap.getString("nickname").orEmpty().ifBlank { "익명" }
+                        ChatEvent.ScrollToBottom -> {
+                            scrollToBottom()
+                        }
 
-                val messageDoc = db.collection("group_chats")
-                    .document(currentRoomId)
-                    .collection("messages")
-                    .document()
-
-                val now = System.currentTimeMillis()
-
-                val messageData = hashMapOf(
-                    "id" to messageDoc.id,
-                    "roomId" to currentRoomId,
-                    "senderUid" to user.uid,
-                    "senderName" to nickname,
-                    "message" to text,
-                    "timestamp" to now
-                )
-
-                val roomData = hashMapOf(
-                    "groupName" to (roomName ?: currentRoomId),
-                    "roomName" to (roomName ?: "오픈채팅"),
-                    "lastMessage" to text,
-                    "lastMessageAt" to now,
-                    "lastSenderUid" to user.uid,
-                    "lastSenderName" to nickname
-                )
-
-                messageDoc.set(messageData)
-                    .addOnSuccessListener {
-                        db.collection("group_chats")
-                            .document(currentRoomId)
-                            .set(roomData, com.google.firebase.firestore.SetOptions.merge())
-                            .addOnFailureListener {
-                                Toast.makeText(this, "방 정보 갱신에 실패했습니다.", Toast.LENGTH_SHORT).show()
+                        ChatEvent.ClearInput -> {
+                            if (etMessage.text.isNotEmpty()) {
+                                etMessage.text.clear()
                             }
+                        }
                     }
-                    .addOnFailureListener {
-                        Toast.makeText(this, "메시지 전송에 실패했습니다.", Toast.LENGTH_SHORT).show()
-                    }
+                }
             }
-            .addOnFailureListener {
-                Toast.makeText(this, "사용자 정보를 불러오지 못했습니다.", Toast.LENGTH_SHORT).show()
-            }
+        }
     }
 
-    private fun markAsRead() {
-        val currentRoomId = roomId ?: return
-        val user = auth.currentUser ?: return
+    private fun bindChatUi(uiState: ChatUiState) {
+        tvChatRoomTitle.text = uiState.roomName.ifBlank { "채팅방" }
+        btnSend.isEnabled = uiState.isSendEnabled
 
-        db.collection("users")
-            .document(user.uid)
-            .get()
-            .addOnSuccessListener { userSnap ->
-                val nickname = userSnap.getString("nickname").orEmpty().ifBlank { "익명" }
+        messageList.clear()
+        messageList.addAll(uiState.messages)
+        adapter.notifyDataSetChanged()
+    }
 
-                val memberData = hashMapOf(
-                    "nickname" to nickname,
-                    "lastReadAt" to System.currentTimeMillis()
-                )
-
-                db.collection("group_chats")
-                    .document(currentRoomId)
-                    .collection("members")
-                    .document(user.uid)
-                    .set(memberData, com.google.firebase.firestore.SetOptions.merge())
-            }
+    private fun scrollToBottom() {
+        if (messageList.isNotEmpty()) {
+            rvChatMessages.scrollToPosition(messageList.size - 1)
+        }
     }
 
     private fun saveCurrentOpenRoomId() {
         val currentRoomId = roomId ?: return
+
         getSharedPreferences(PREF_CHAT_STATE, Context.MODE_PRIVATE)
             .edit()
             .putString(KEY_OPEN_ROOM_ID, currentRoomId)
@@ -241,14 +217,18 @@ class GroupChatActivity : AppCompatActivity() {
     private fun clearCurrentOpenRoomId() {
         val prefs = getSharedPreferences(PREF_CHAT_STATE, Context.MODE_PRIVATE)
         val savedRoomId = prefs.getString(KEY_OPEN_ROOM_ID, null)
+
         if (savedRoomId == roomId) {
-            prefs.edit().remove(KEY_OPEN_ROOM_ID).apply()
+            prefs.edit()
+                .remove(KEY_OPEN_ROOM_ID)
+                .apply()
         }
     }
 
     override fun onResume() {
         super.onResume()
         saveCurrentOpenRoomId()
+        viewModel.markAsRead()
     }
 
     override fun onPause() {
@@ -259,15 +239,17 @@ class GroupChatActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         clearCurrentOpenRoomId()
-        messageListener?.remove()
-        messageListener = null
     }
 
     companion object {
         private const val EXTRA_ROOM_ID = "room_id"
         private const val EXTRA_ROOM_NAME = "room_name"
 
-        fun newIntent(context: Context, roomId: String, roomName: String): Intent {
+        fun newIntent(
+            context: Context,
+            roomId: String,
+            roomName: String
+        ): Intent {
             return Intent(context, GroupChatActivity::class.java).apply {
                 putExtra(EXTRA_ROOM_ID, roomId)
                 putExtra(EXTRA_ROOM_NAME, roomName)
