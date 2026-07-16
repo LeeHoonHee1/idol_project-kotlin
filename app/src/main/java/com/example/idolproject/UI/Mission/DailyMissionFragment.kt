@@ -23,6 +23,7 @@ class DailyMissionFragment : Fragment() {
 
     private val viewModel: MissionViewModel by viewModels()
 
+    private var hasRenderedDailyCompleted = false
     private lateinit var cardAttendance: MaterialCardView
     private lateinit var ivDailyIcon: ImageView
     private lateinit var tvDailyStatus: TextView
@@ -95,6 +96,10 @@ class DailyMissionFragment : Fragment() {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.event.collect { event ->
                     when (event) {
+                        MissionEvent.PlayDailyCompleteAnimation -> {
+                            playMissionCompleteAnimation(cardAttendance)
+                        }
+
                         is MissionEvent.ShowToast -> {
                             Toast.makeText(
                                 requireContext(),
@@ -125,22 +130,28 @@ class DailyMissionFragment : Fragment() {
     }
 
     private fun bindDailyMissionUi(uiState: DailyMissionUiState) {
+        if (uiState.isLoading) {
+            cardAttendance.isEnabled = false
+            cardAttendance.alpha = 0.7f
+            cardAttendance.strokeColor = ContextCompat.getColor(
+                requireContext(),
+                R.color.lavender
+            )
+
+            ivDailyIcon.visibility = View.INVISIBLE
+            tvDailyStatus.visibility = View.INVISIBLE
+            tvDailyHint.visibility = View.INVISIBLE
+
+            return
+        }
+
+        ivDailyIcon.visibility = View.VISIBLE
+        tvDailyStatus.visibility = View.VISIBLE
+        tvDailyHint.visibility = View.VISIBLE
+
         tvDailyStatus.text = uiState.buttonText
         tvDailyHint.text = uiState.descriptionText
         cardAttendance.isEnabled = uiState.buttonEnabled
-
-        if (uiState.isLoading) {
-            cardAttendance.alpha = 0.7f
-            ivDailyIcon.setImageResource(R.drawable.ic_mission_daily)
-            tvDailyStatus.background = ContextCompat.getDrawable(
-                requireContext(),
-                R.drawable.bg_lavender_chip
-            )
-            tvDailyStatus.setTextColor(
-                ContextCompat.getColor(requireContext(), R.color.lavender)
-            )
-            return
-        }
 
         if (uiState.isCompleted) {
             tvDailyStatus.background = ContextCompat.getDrawable(
@@ -156,8 +167,10 @@ class DailyMissionFragment : Fragment() {
                 requireContext(),
                 R.color.lavender
             )
-            playMissionCompleteAnimation(cardAttendance)
+
         } else {
+            hasRenderedDailyCompleted = false
+
             tvDailyStatus.background = ContextCompat.getDrawable(
                 requireContext(),
                 R.drawable.bg_lavender_chip

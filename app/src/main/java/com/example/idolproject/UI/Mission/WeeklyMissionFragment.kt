@@ -24,6 +24,9 @@ class WeeklyMissionFragment : Fragment() {
 
     private val viewModel: MissionViewModel by viewModels()
 
+    private var hasRenderedWeeklyRewardAvailable = false
+    private var hasRenderedWeeklyRewardReceived = false
+
     private lateinit var cardWeeklyAttendance: MaterialCardView
     private lateinit var ivWeeklyIcon: ImageView
     private lateinit var tvWeeklyStatus: TextView
@@ -84,6 +87,11 @@ class WeeklyMissionFragment : Fragment() {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.event.collect { event ->
                     when (event) {
+                        MissionEvent.PlayDailyCompleteAnimation -> {
+                            // 주간 미션 화면에서는 일일 미션 완료 애니메이션을 처리하지 않음
+                            Unit
+                        }
+
                         is MissionEvent.ShowToast -> {
                             Toast.makeText(
                                 requireContext(),
@@ -111,6 +119,16 @@ class WeeklyMissionFragment : Fragment() {
     }
 
     private fun bindWeeklyMissionUi(uiState: WeeklyMissionUiState) {
+        if (uiState.isLoading) {
+            cardWeeklyAttendance.isEnabled = false
+            return
+        }
+
+        ivWeeklyIcon.visibility = View.VISIBLE
+        tvWeeklyStatus.visibility = View.VISIBLE
+        tvWeeklyHint.visibility = View.VISIBLE
+        progressWeeklyMission.visibility = View.VISIBLE
+
         val safeCount = uiState.completedDailyCount.coerceIn(0, 7)
 
         progressWeeklyMission.max = 7
@@ -121,22 +139,6 @@ class WeeklyMissionFragment : Fragment() {
         cardWeeklyAttendance.isEnabled = uiState.buttonEnabled
 
         when {
-            uiState.isLoading -> {
-                tvWeeklyStatus.background = ContextCompat.getDrawable(
-                    requireContext(),
-                    R.drawable.bg_lavender_chip
-                )
-                tvWeeklyStatus.setTextColor(
-                    ContextCompat.getColor(requireContext(), R.color.lavender)
-                )
-                ivWeeklyIcon.setImageResource(R.drawable.ic_mission_weekly)
-                cardWeeklyAttendance.alpha = 0.7f
-                cardWeeklyAttendance.strokeColor = ContextCompat.getColor(
-                    requireContext(),
-                    R.color.lavender
-                )
-            }
-
             uiState.isRewardReceived -> {
                 tvWeeklyStatus.background = ContextCompat.getDrawable(
                     requireContext(),
@@ -167,7 +169,6 @@ class WeeklyMissionFragment : Fragment() {
                     requireContext(),
                     R.color.lavender
                 )
-                playMissionRewardReadyAnimation(cardWeeklyAttendance)
             }
 
             else -> {

@@ -93,6 +93,8 @@ class MissionViewModel @Inject constructor(
             if (result.isSuccess) {
                 updateDailyUiState(isCompleted = true)
 
+                _event.emit(MissionEvent.PlayDailyCompleteAnimation)
+
                 _event.emit(
                     MissionEvent.ShowRewardDialog(
                         icon = "",

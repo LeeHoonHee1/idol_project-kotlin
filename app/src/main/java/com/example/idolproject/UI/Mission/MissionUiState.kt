@@ -19,6 +19,8 @@ data class WeeklyMissionUiState(
 )
 
 sealed interface MissionEvent {
+    data object PlayDailyCompleteAnimation : MissionEvent
+
     data class ShowToast(
         val message: String
     ) : MissionEvent
