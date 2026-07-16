@@ -1,35 +1,49 @@
 package com.example.idolproject.FCM
 
+import android.Manifest
 import android.app.PendingIntent
+import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
-import com.example.idolproject.MainActivity
+import androidx.core.content.ContextCompat
+import com.example.idolproject.Drawer.Community.GroupChatActivity
 import com.example.idolproject.R
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
+import com.example.idolproject.data.repository.FcmRepository
+import com.example.idolproject.data.repository.FcmTokenUpdateResult
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
-import android.Manifest
-import android.content.pm.PackageManager
-import androidx.core.content.ContextCompat
-import android.content.Context
-import com.example.idolproject.Drawer.Community.GroupChatActivity
+import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
+import javax.inject.Inject
 
+@AndroidEntryPoint
 class MyFirebaseMessagingService : FirebaseMessagingService() {
+
+    @Inject
+    lateinit var fcmRepository: FcmRepository
+
+    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     private val PREF_CHAT_STATE = "chat_state"
     private val KEY_OPEN_ROOM_ID = "current_open_chat_room_id"
 
     override fun onNewToken(token: String) {
         super.onNewToken(token)
+
         Log.d("FCM", "new token = $token")
-        saveTokenToFirestore(token)
+        saveToken(token)
     }
 
     override fun onMessageReceived(message: RemoteMessage) {
         super.onMessageReceived(message)
+
         Log.d("FCM", "message received: ${message.data}")
 
         val title = message.data["title"] ?: "새 메시지"
@@ -45,7 +59,30 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
             return
         }
 
-        showNotification(title, body, groupId, roomName)
+        showNotification(
+            title = title,
+            body = body,
+            groupId = groupId,
+            roomName = roomName
+        )
+    }
+
+    private fun saveToken(token: String) {
+        serviceScope.launch {
+            when (val result = fcmRepository.saveTokenToCurrentUser(token)) {
+                FcmTokenUpdateResult.Success -> {
+                    Unit
+                }
+
+                FcmTokenUpdateResult.NotLoggedIn -> {
+                    Log.d("FCM", "token save skipped: user not logged in")
+                }
+
+                is FcmTokenUpdateResult.Failed -> {
+                    Log.e("FCM", "token save failed: ${result.message}")
+                }
+            }
+        }
     }
 
     private fun showNotification(
@@ -54,17 +91,19 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         groupId: String?,
         roomName: String?
     ) {
+        val safeGroupId = groupId ?: return
+
         val intent = GroupChatActivity.newIntent(
             this,
-            groupId ?: return,
-            roomName ?: "${groupId} 오픈채팅"
+            safeGroupId,
+            roomName ?: "${safeGroupId} 오픈채팅"
         ).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
 
         val pendingIntent = PendingIntent.getActivity(
             this,
-            groupId?.hashCode() ?: 0,
+            safeGroupId.hashCode(),
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
@@ -79,7 +118,8 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
             .setContentIntent(pendingIntent)
             .build()
 
-        if (ContextCompat.checkSelfPermission(
+        if (
+            ContextCompat.checkSelfPermission(
                 this,
                 Manifest.permission.POST_NOTIFICATIONS
             ) == PackageManager.PERMISSION_GRANTED
@@ -93,18 +133,8 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         }
     }
 
-    private fun saveTokenToFirestore(token: String) {
-        val user = FirebaseAuth.getInstance().currentUser ?: return
-        val db = FirebaseFirestore.getInstance()
-
-        db.collection("users")
-            .document(user.uid)
-            .update("fcmToken", token)
-            .addOnSuccessListener {
-                Log.d("FCM", "token saved")
-            }
-            .addOnFailureListener { e ->
-                Log.e("FCM", "token save failed", e)
-            }
+    override fun onDestroy() {
+        serviceScope.cancel()
+        super.onDestroy()
     }
 }

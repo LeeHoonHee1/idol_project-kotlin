@@ -16,7 +16,6 @@ import com.example.idolproject.Drawer.Community.CommunityFragment
 import com.example.idolproject.Drawer.CustomerFragment
 import com.example.idolproject.Drawer.EventFragment
 import com.example.idolproject.Drawer.Group.GroupFragment
-import com.example.idolproject.Drawer.LogOutFragment
 import com.example.idolproject.UI.Friend.FriendFragment
 import com.example.idolproject.UI.Home.HomeFragment
 import com.example.idolproject.UI.Mission.MissionFragment
@@ -27,10 +26,6 @@ import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.navigation.NavigationView
 import android.view.Menu
 import com.example.idolproject.UI.Friend.FriendRequestsFragment
-import android.util.Log
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.messaging.FirebaseMessaging
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
@@ -44,10 +39,13 @@ import dagger.hilt.android.AndroidEntryPoint
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import com.example.idolproject.Drawer.LogOutFragment
 import com.example.idolproject.data.repository.FriendRepository
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import com.example.idolproject.data.repository.FcmRepository
+import com.example.idolproject.data.repository.FcmTokenUpdateResult
 
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelectedListener {
@@ -58,7 +56,8 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     @Inject
     lateinit var friendRepository: FriendRepository
 
-    private val auth = FirebaseAuth.getInstance()
+    @Inject
+    lateinit var fcmRepository: FcmRepository
     private var pendingCountJob: Job? = null
     private var pendingCount: Int = 0
 
@@ -239,7 +238,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     }
 
     private fun startUncheckedPendingCountObserver() {
-        val uid = auth.currentUser?.uid ?: return
+        val uid = friendRepository.getCurrentUserId() ?: return
 
         pendingCountJob?.cancel()
         pendingCountJob = lifecycleScope.launch {
@@ -267,19 +266,21 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 //    }
 
     private fun updateCurrentFcmToken() {
-        val user = FirebaseAuth.getInstance().currentUser ?: return
-        val db = FirebaseFirestore.getInstance()
+        lifecycleScope.launch {
+            when (fcmRepository.updateCurrentFcmToken()) {
+                FcmTokenUpdateResult.Success -> {
+                    Unit
+                }
 
-        FirebaseMessaging.getInstance().token
-            .addOnSuccessListener { token ->
-                Log.d("FCM", "current token = $token")
-                db.collection("users")
-                    .document(user.uid)
-                    .update("fcmToken", token)
+                FcmTokenUpdateResult.NotLoggedIn -> {
+                    Unit
+                }
+
+                is FcmTokenUpdateResult.Failed -> {
+                    Unit
+                }
             }
-            .addOnFailureListener { e ->
-                Log.e("FCM", "get token failed", e)
-            }
+        }
     }
 
     private fun requestNotificationPermissionIfNeeded() {

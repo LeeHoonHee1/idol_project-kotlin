@@ -4,9 +4,11 @@ import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import com.example.idolproject.MainActivity
 import com.example.idolproject.UserSession
 import com.google.firebase.auth.FirebaseAuth
+import kotlinx.coroutines.launch
 
 class SplashActivity : AppCompatActivity() {
 
@@ -30,7 +32,9 @@ class SplashActivity : AppCompatActivity() {
     }
 
     private fun syncUserSession() {
-        UserSession.syncFromFirestore(this) { isSuccess ->
+        lifecycleScope.launch {
+            val isSuccess = UserSession.syncFromFirestore(this@SplashActivity)
+
             if (isSuccess) {
                 goMain()
             } else {

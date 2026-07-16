@@ -18,6 +18,16 @@ data class WeeklyMissionUiState(
     val descriptionText: String = "이번 주 미션 상태를 확인하고 있습니다."
 )
 
+data class MissionGrowthUiState(
+    val isLoading: Boolean = true,
+    val level: Int = 1,
+    val exp: Int = 0,
+    val needExp: Int = 100,
+    val expPercent: Int = 0,
+    val badgeId: String = "bronze",
+    val errorMessage: String? = null
+)
+
 sealed interface MissionEvent {
     data object PlayDailyCompleteAnimation : MissionEvent
 

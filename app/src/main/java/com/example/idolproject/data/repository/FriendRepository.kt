@@ -18,8 +18,9 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
-import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 
 class FriendRepository @Inject constructor() {
 
@@ -635,6 +636,91 @@ class FriendRepository @Inject constructor() {
             else -> "challenger"
         }
     }
+
+    fun observeFriendProfile(friendUid: String): Flow<FriendProfile> = callbackFlow {
+        val myUid = auth.currentUser?.uid
+
+        if (friendUid.isBlank()) {
+            close(IllegalArgumentException("friendUid is blank"))
+            return@callbackFlow
+        }
+
+        val listener = usersCol
+            .document(friendUid)
+            .addSnapshotListener { snap, error ->
+                if (error != null) {
+                    close(error)
+                    return@addSnapshotListener
+                }
+
+                if (snap == null || !snap.exists()) {
+                    close(IllegalStateException("존재하지 않는 사용자"))
+                    return@addSnapshotListener
+                }
+
+                launch {
+                    val myFavoriteGroupId = if (myUid.isNullOrBlank()) {
+                        ""
+                    } else {
+                        runCatching {
+                            usersCol
+                                .document(myUid)
+                                .get()
+                                .await()
+                                .getString("favoriteGroupId")
+                                .orEmpty()
+                        }.getOrDefault("")
+                    }
+
+                    trySend(
+                        snap.toFriendProfile(
+                            friendUid = friendUid,
+                            myFavoriteGroupId = myFavoriteGroupId
+                        )
+                    )
+                }
+            }
+
+        awaitClose {
+            listener.remove()
+        }
+    }
+
+    private fun DocumentSnapshot.toFriendProfile(
+        friendUid: String,
+        myFavoriteGroupId: String
+    ): FriendProfile {
+        val nickname = getString("nickname") ?: "(알 수 없음)"
+        val status = getString("statusMessage") ?: "상태메시지 없음"
+
+        val level = (getLong("level") ?: 1L).toInt()
+        val badgeIdFromDb = getString("badgeId").orEmpty()
+        val finalBadgeId = if (badgeIdFromDb.isBlank() || badgeIdFromDb == "default") {
+            getBadgeIdByLevel(level)
+        } else {
+            badgeIdFromDb
+        }
+
+        val favoriteGroupId = getString("favoriteGroupId").orEmpty()
+        val photoUrl = getString("photoUrl")
+            ?: getString("profileImageUrl")
+
+        val isSameFavorite =
+            myFavoriteGroupId.isNotBlank() &&
+                    favoriteGroupId.isNotBlank() &&
+                    myFavoriteGroupId == favoriteGroupId
+
+        return FriendProfile(
+            uid = friendUid,
+            nickname = nickname,
+            statusMessage = status.ifBlank { "상태메시지 없음" },
+            level = level,
+            badgeId = finalBadgeId,
+            favoriteGroupId = favoriteGroupId,
+            photoUrl = photoUrl,
+            isSameFavorite = isSameFavorite
+        )
+    }
 }
 
 data class FriendSearchProfile(
@@ -651,6 +737,17 @@ data class FriendSearchProfile(
     val isAlreadyFriend: Boolean,
     val hasPendingRequest: Boolean,
     val hasReceivedPendingRequest: Boolean
+)
+
+data class FriendProfile(
+    val uid: String = "",
+    val nickname: String = "(알 수 없음)",
+    val statusMessage: String = "상태메시지 없음",
+    val level: Int = 1,
+    val badgeId: String = "bronze",
+    val favoriteGroupId: String = "",
+    val photoUrl: String? = null,
+    val isSameFavorite: Boolean = false
 )
 
 sealed interface FriendSearchResult {

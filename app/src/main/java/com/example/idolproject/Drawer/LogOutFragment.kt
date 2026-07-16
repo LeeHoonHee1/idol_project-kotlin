@@ -1,62 +1,58 @@
-package com.example.idolproject.Drawer;
+package com.example.idolproject.Drawer
 
-import android.content.Intent;
-import android.os.Bundle;
+import android.content.Intent
+import android.os.Bundle
+import android.view.View
+import android.widget.Toast
+import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
+import com.example.idolproject.Login.LoginActivity
+import com.example.idolproject.data.repository.AuthRepository
+import com.example.idolproject.data.repository.FcmRepository
+import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
+import javax.inject.Inject
 
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import androidx.fragment.app.Fragment;
+@AndroidEntryPoint
+class LogOutFragment : Fragment() {
 
-import com.example.idolproject.Login.LoginActivity;
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.firestore.FieldValue;
-import com.google.firebase.firestore.FirebaseFirestore;
+    @Inject
+    lateinit var authRepository: AuthRepository
 
-public class LogOutFragment extends Fragment {
+    @Inject
+    lateinit var fcmRepository: FcmRepository
 
-    public LogOutFragment() {
-        super(); // 레이아웃 없어도 됨
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        Toast.makeText(
+            requireContext(),
+            "로그아웃 실행",
+            Toast.LENGTH_SHORT
+        ).show()
+
+        clearFcmTokenAndLogout()
     }
 
-    @Override
-    public void onCreate(@Nullable Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
+    private fun clearFcmTokenAndLogout() {
+        lifecycleScope.launch {
+            fcmRepository.clearCurrentUserFcmToken()
 
-        android.util.Log.d("LogOutFragment", "onCreate called");
-        android.widget.Toast.makeText(requireContext(), "로그아웃 실행", android.widget.Toast.LENGTH_SHORT).show();
-
-        clearFcmTokenAndLogout();
+            authRepository.logout()
+            moveToLogin()
+        }
     }
 
-    private void clearFcmTokenAndLogout() {
-        FirebaseAuth auth = FirebaseAuth.getInstance();
-
-        if (auth.getCurrentUser() == null) {
-            moveToLogin();
-            return;
+    private fun moveToLogin() {
+        val intent = Intent(requireContext(), LoginActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
         }
 
-        String uid = auth.getCurrentUser().getUid();
-
-        FirebaseFirestore.getInstance()
-                .collection("users")
-                .document(uid)
-                .update("fcmToken", FieldValue.delete())
-                .addOnCompleteListener(task -> {
-                    auth.signOut();
-                    moveToLogin();
-                });
+        startActivity(intent)
     }
 
-    private void moveToLogin() {
-        Intent intent = new Intent(requireContext(), LoginActivity.class);
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-        startActivity(intent);
-    }
-
-    @Override
-    public void onViewCreated(@NonNull android.view.View view, @Nullable Bundle savedInstanceState) {
-        super.onViewCreated(view, savedInstanceState);
-        // onCreate에서 이미 이동하니까 여기서는 할 일 없음
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        // onCreate에서 이미 이동 처리
     }
 }

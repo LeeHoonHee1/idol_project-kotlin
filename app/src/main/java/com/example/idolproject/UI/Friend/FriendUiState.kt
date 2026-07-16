@@ -1,6 +1,7 @@
 package com.example.idolproject.UI.Friend
 
 import com.example.idolproject.data.repository.FriendSearchProfile
+import com.example.idolproject.data.repository.FriendProfile
 
 data class FriendListUiState(
     val isLoading: Boolean = true,
@@ -19,6 +20,12 @@ data class FriendSearchUiState(
 data class FriendRequestsUiState(
     val isLoading: Boolean = true,
     val requests: List<FriendRequestItem> = emptyList(),
+    val errorMessage: String? = null
+)
+
+data class FriendProfileUiState(
+    val isLoading: Boolean = true,
+    val profile: FriendProfile? = null,
     val errorMessage: String? = null
 )
 

@@ -8,27 +8,28 @@ import android.widget.ImageView
 import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import com.example.idolproject.R
 import com.example.idolproject.databinding.FragmentMissionBinding
 import com.google.android.material.tabs.TabLayoutMediator
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.ListenerRegistration
+import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
 
+@AndroidEntryPoint
 class MissionFragment : Fragment() {
 
     private var _binding: FragmentMissionBinding? = null
     private val binding get() = _binding!!
 
+    private val viewModel: MissionViewModel by viewModels()
+
     private lateinit var ivMissionBadge: ImageView
     private lateinit var tvMissionLevel: TextView
     private lateinit var tvMissionExp: TextView
     private lateinit var progressMissionExp: ProgressBar
-
-    private val auth = FirebaseAuth.getInstance()
-    private val db = FirebaseFirestore.getInstance()
-
-    private var userListener: ListenerRegistration? = null
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -44,7 +45,9 @@ class MissionFragment : Fragment() {
 
         setupMissionPager()
         bindGrowthViews()
-        startMissionUserListener()
+        observeMissionGrowthUiState()
+
+        viewModel.startObserveMissionGrowthProfile()
     }
 
     private fun setupMissionPager() {
@@ -67,39 +70,52 @@ class MissionFragment : Fragment() {
         progressMissionExp = binding.progressMissionExp
     }
 
-    private fun startMissionUserListener() {
-        val uid = auth.currentUser?.uid ?: return
-
-        userListener?.remove()
-
-        userListener = db.collection("users")
-            .document(uid)
-            .addSnapshotListener { snap, e ->
-                if (e != null || snap == null || !snap.exists()) {
-                    return@addSnapshotListener
+    private fun observeMissionGrowthUiState() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.growthUiState.collect { uiState ->
+                    bindMissionGrowthUi(uiState)
                 }
+            }
+        }
+    }
 
-                val level = (snap.getLong("level") ?: 1L).toInt()
-                val exp = (snap.getLong("exp") ?: 0L).toInt()
+    private fun bindMissionGrowthUi(uiState: MissionGrowthUiState) {
+        when {
+            uiState.isLoading -> {
+                setGrowthLoadingState()
+            }
 
-                val needExp = 100
-                val percent = ((exp * 100) / needExp).coerceIn(0, 100)
+            uiState.errorMessage != null -> {
+                setGrowthErrorState()
+            }
 
-                val badgeIdFromDb = snap.getString("badgeId").orEmpty()
-                val finalBadgeId = if (badgeIdFromDb.isBlank() || badgeIdFromDb == "default") {
-                    getBadgeIdByLevel(level)
-                } else {
-                    badgeIdFromDb
-                }
-
-                tvMissionLevel.text = "Lv.$level"
-                tvMissionExp.text = "EXP $exp / $needExp ($percent%)"
+            else -> {
+                tvMissionLevel.text = "Lv.${uiState.level}"
+                tvMissionExp.text = "EXP ${uiState.exp} / ${uiState.needExp} (${uiState.expPercent}%)"
 
                 progressMissionExp.max = 100
-                progressMissionExp.progress = percent
+                progressMissionExp.progress = uiState.expPercent
 
-                ivMissionBadge.setImageResource(mapBadgeRes(finalBadgeId))
+                ivMissionBadge.setImageResource(mapBadgeRes(uiState.badgeId))
             }
+        }
+    }
+
+    private fun setGrowthLoadingState() {
+        tvMissionLevel.text = "Lv.-"
+        tvMissionExp.text = "EXP 불러오는 중..."
+        progressMissionExp.max = 100
+        progressMissionExp.progress = 0
+        ivMissionBadge.setImageResource(R.drawable.ic_badge_bronze)
+    }
+
+    private fun setGrowthErrorState() {
+        tvMissionLevel.text = "Lv.-"
+        tvMissionExp.text = "EXP 정보를 불러오지 못했어요"
+        progressMissionExp.max = 100
+        progressMissionExp.progress = 0
+        ivMissionBadge.setImageResource(R.drawable.ic_badge_bronze)
     }
 
     private fun mapBadgeRes(badgeId: String): Int {
@@ -115,21 +131,7 @@ class MissionFragment : Fragment() {
         }
     }
 
-    private fun getBadgeIdByLevel(level: Int): String {
-        return when (level) {
-            in 1..4 -> "bronze"
-            in 5..9 -> "silver"
-            in 10..14 -> "gold"
-            in 15..19 -> "platinum"
-            in 20..29 -> "master"
-            in 30..39 -> "grandmaster"
-            else -> "challenger"
-        }
-    }
-
     override fun onDestroyView() {
-        userListener?.remove()
-        userListener = null
         _binding = null
         super.onDestroyView()
     }

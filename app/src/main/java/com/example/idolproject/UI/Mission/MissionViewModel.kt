@@ -3,7 +3,6 @@ package com.example.idolproject.UI.Mission
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.idolproject.data.repository.MissionRepository
-import com.google.firebase.auth.FirebaseAuth
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -13,25 +12,29 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.catch
 
 @HiltViewModel
 class MissionViewModel @Inject constructor(
     private val missionRepository: MissionRepository
 ) : ViewModel() {
-
-    private val auth: FirebaseAuth = FirebaseAuth.getInstance()
-
     private val _dailyUiState = MutableStateFlow(DailyMissionUiState())
     val dailyUiState: StateFlow<DailyMissionUiState> = _dailyUiState.asStateFlow()
 
     private val _weeklyUiState = MutableStateFlow(WeeklyMissionUiState())
     val weeklyUiState: StateFlow<WeeklyMissionUiState> = _weeklyUiState.asStateFlow()
 
+    private val _growthUiState = MutableStateFlow(MissionGrowthUiState())
+    val growthUiState: StateFlow<MissionGrowthUiState> = _growthUiState.asStateFlow()
+
+    private var growthJob: Job? = null
+
     private val _event = MutableSharedFlow<MissionEvent>()
     val event: SharedFlow<MissionEvent> = _event.asSharedFlow()
 
     fun loadDailyMissionStatus() {
-        val uid = auth.currentUser?.uid
+        val uid = missionRepository.getCurrentUserId()
 
         if (uid == null) {
             _dailyUiState.value = DailyMissionUiState(
@@ -75,7 +78,7 @@ class MissionViewModel @Inject constructor(
     }
 
     fun completeDailyAttendance() {
-        val uid = auth.currentUser?.uid
+        val uid = missionRepository.getCurrentUserId()
 
         if (uid == null) {
             emitToast("로그인 정보를 확인해주세요.")
@@ -118,7 +121,7 @@ class MissionViewModel @Inject constructor(
     }
 
     fun grantTestExp() {
-        val uid = auth.currentUser?.uid
+        val uid = missionRepository.getCurrentUserId()
 
         if (uid == null) {
             emitToast("로그인 정보를 확인해주세요.")
@@ -145,7 +148,7 @@ class MissionViewModel @Inject constructor(
     }
 
     fun loadWeeklyMissionStatus() {
-        val uid = auth.currentUser?.uid
+        val uid = missionRepository.getCurrentUserId()
 
         if (uid == null) {
             _weeklyUiState.value = WeeklyMissionUiState(
@@ -198,7 +201,7 @@ class MissionViewModel @Inject constructor(
     }
 
     fun claimWeeklyReward() {
-        val uid = auth.currentUser?.uid
+        val uid = missionRepository.getCurrentUserId()
 
         if (uid == null) {
             emitToast("로그인 정보를 확인해주세요.")
@@ -316,9 +319,44 @@ class MissionViewModel @Inject constructor(
         }
     }
 
+    fun startObserveMissionGrowthProfile() {
+        growthJob?.cancel()
+        growthJob = viewModelScope.launch {
+            _growthUiState.value = MissionGrowthUiState(
+                isLoading = true,
+                errorMessage = null
+            )
+
+            missionRepository.observeMissionGrowthProfile()
+                .catch { throwable ->
+                    _growthUiState.value = MissionGrowthUiState(
+                        isLoading = false,
+                        errorMessage = throwable.message ?: "성장 정보를 불러오지 못했습니다."
+                    )
+                }
+                .collect { profile ->
+                    _growthUiState.value = MissionGrowthUiState(
+                        isLoading = false,
+                        level = profile.level,
+                        exp = profile.exp,
+                        needExp = profile.needExp,
+                        expPercent = profile.expPercent,
+                        badgeId = profile.badgeId,
+                        errorMessage = null
+                    )
+                }
+        }
+    }
+
     private fun emitToast(message: String) {
         viewModelScope.launch {
             _event.emit(MissionEvent.ShowToast(message))
         }
     }
+
+    override fun onCleared() {
+        super.onCleared()
+        growthJob?.cancel()
+    }
 }
+

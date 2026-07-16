@@ -1,17 +1,21 @@
 package com.example.idolproject.UI.Friend
 
 import android.os.Bundle
-import android.util.Log
 import android.view.View
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import coil.load
 import com.example.idolproject.R
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.ListenerRegistration
+import com.example.idolproject.data.repository.FriendProfile
+import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
 
+@AndroidEntryPoint
 class FriendProfileFragment : Fragment(R.layout.fragment_friend_profile) {
 
     companion object {
@@ -26,10 +30,7 @@ class FriendProfileFragment : Fragment(R.layout.fragment_friend_profile) {
         }
     }
 
-    private val auth = FirebaseAuth.getInstance()
-    private val db = FirebaseFirestore.getInstance()
-
-    private var userListener: ListenerRegistration? = null
+    private val viewModel: FriendViewModel by viewModels()
 
     private lateinit var ivProfile: ImageView
     private lateinit var tvNickname: TextView
@@ -52,17 +53,10 @@ class FriendProfileFragment : Fragment(R.layout.fragment_friend_profile) {
         super.onViewCreated(view, savedInstanceState)
 
         bindViews(view)
+        observeFriendProfileUiState()
 
         val friendUid = arguments?.getString(ARG_UID).orEmpty()
-
-        if (friendUid.isBlank()) {
-            Log.e("FRIEND_PROFILE", "friendUid is blank")
-            tvNickname.text = "친구 정보를 찾을 수 없어"
-            return
-        }
-
-        setLoadingState()
-        listenFriendProfile(friendUid)
+        viewModel.startObserveFriendProfile(friendUid)
     }
 
     private fun bindViews(view: View) {
@@ -76,6 +70,32 @@ class FriendProfileFragment : Fragment(R.layout.fragment_friend_profile) {
         tvBadgeHint = view.findViewById(R.id.tv_badge_hint)
     }
 
+    private fun observeFriendProfileUiState() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.friendProfileUiState.collect { uiState ->
+                    bindFriendProfileUi(uiState)
+                }
+            }
+        }
+    }
+
+    private fun bindFriendProfileUi(uiState: FriendProfileUiState) {
+        when {
+            uiState.isLoading -> {
+                setLoadingState()
+            }
+
+            uiState.errorMessage != null -> {
+                setErrorState(uiState.errorMessage)
+            }
+
+            uiState.profile != null -> {
+                bindFriendProfile(uiState.profile)
+            }
+        }
+    }
+
     private fun setLoadingState() {
         tvNickname.text = "불러오는 중..."
         tvStatus.text = ""
@@ -87,96 +107,51 @@ class FriendProfileFragment : Fragment(R.layout.fragment_friend_profile) {
         ivBadge.setImageResource(R.drawable.ic_badge_bronze)
     }
 
-    private fun listenFriendProfile(friendUid: String) {
-        val myUid = auth.currentUser?.uid
-
-        userListener?.remove()
-
-        userListener = db.collection("users")
-            .document(friendUid)
-            .addSnapshotListener { snap, err ->
-                if (err != null) {
-                    Log.e("FRIEND_PROFILE", "listen failed", err)
-                    tvNickname.text = "불러오기 실패"
-                    tvStatus.text = err.message.orEmpty()
-                    return@addSnapshotListener
-                }
-
-                if (snap == null || !snap.exists()) {
-                    tvNickname.text = "존재하지 않는 사용자"
-                    tvStatus.text = ""
-                    return@addSnapshotListener
-                }
-
-                val nickname = snap.getString("nickname") ?: "(알 수 없음)"
-                val status = snap.getString("statusMessage") ?: "상태메시지 없음"
-
-                val level = (snap.getLong("level") ?: 1L).toInt()
-                val badgeIdFromDb = snap.getString("badgeId").orEmpty()
-                val finalBadgeId = if (badgeIdFromDb.isBlank() || badgeIdFromDb == "default") {
-                    getBadgeIdByLevel(level)
-                } else {
-                    badgeIdFromDb
-                }
-
-                val favoriteGroupId = snap.getString("favoriteGroupId").orEmpty()
-                val favoriteGroupName = if (favoriteGroupId.isBlank()) {
-                    "-"
-                } else {
-                    groupDisplayMap[favoriteGroupId] ?: favoriteGroupId
-                }
-
-                val photoUrl = snap.getString("photoUrl")
-                    ?: snap.getString("profileImageUrl")
-
-                tvNickname.text = nickname
-                tvStatus.text = status.ifBlank { "상태메시지 없음" }
-                tvLevel.text = "Lv.$level"
-                tvFavorite.text = if (favoriteGroupName == "-") {
-                    "최애: -"
-                } else {
-                    "최애\n$favoriteGroupName"
-                }
-
-                ivBadge.setImageResource(mapBadgeRes(finalBadgeId))
-                tvBadgeHint.text = makeBadgeHint(finalBadgeId, level)
-
-                if (photoUrl.isNullOrBlank()) {
-                    ivProfile.setImageResource(R.drawable.person_24dp)
-                } else {
-                    ivProfile.load(photoUrl) {
-                        crossfade(true)
-                        placeholder(R.drawable.person_24dp)
-                        error(R.drawable.person_24dp)
-                    }
-                }
-
-                updateSameFavoriteLabel(myUid, favoriteGroupId)
-            }
+    private fun setErrorState(message: String) {
+        tvNickname.text = "불러오기 실패"
+        tvStatus.text = message
+        tvLevel.text = "Lv.-"
+        tvFavorite.text = "최애: -"
+        tvSameFavorite.visibility = View.GONE
+        tvBadgeHint.text = "대표 뱃지 정보를 불러오지 못했어요"
+        ivProfile.setImageResource(R.drawable.person_24dp)
+        ivBadge.setImageResource(R.drawable.ic_badge_bronze)
     }
 
-    private fun updateSameFavoriteLabel(myUid: String?, friendFavoriteGroupId: String) {
-        if (myUid.isNullOrBlank() || friendFavoriteGroupId.isBlank()) {
-            tvSameFavorite.visibility = View.GONE
-            return
+    private fun bindFriendProfile(profile: FriendProfile) {
+        val favoriteGroupName = if (profile.favoriteGroupId.isBlank()) {
+            "-"
+        } else {
+            groupDisplayMap[profile.favoriteGroupId] ?: profile.favoriteGroupId
         }
 
-        db.collection("users")
-            .document(myUid)
-            .get()
-            .addOnSuccessListener { mySnap ->
-                val myFavoriteGroupId = mySnap.getString("favoriteGroupId").orEmpty()
+        tvNickname.text = profile.nickname
+        tvStatus.text = profile.statusMessage.ifBlank { "상태메시지 없음" }
+        tvLevel.text = "Lv.${profile.level}"
+        tvFavorite.text = if (favoriteGroupName == "-") {
+            "최애: -"
+        } else {
+            "최애\n$favoriteGroupName"
+        }
 
-                tvSameFavorite.visibility =
-                    if (myFavoriteGroupId.isNotBlank() && myFavoriteGroupId == friendFavoriteGroupId) {
-                        View.VISIBLE
-                    } else {
-                        View.GONE
-                    }
+        tvSameFavorite.visibility = if (profile.isSameFavorite) {
+            View.VISIBLE
+        } else {
+            View.GONE
+        }
+
+        ivBadge.setImageResource(mapBadgeRes(profile.badgeId))
+        tvBadgeHint.text = makeBadgeHint(profile.badgeId, profile.level)
+
+        if (profile.photoUrl.isNullOrBlank()) {
+            ivProfile.setImageResource(R.drawable.person_24dp)
+        } else {
+            ivProfile.load(profile.photoUrl) {
+                crossfade(true)
+                placeholder(R.drawable.person_24dp)
+                error(R.drawable.person_24dp)
             }
-            .addOnFailureListener {
-                tvSameFavorite.visibility = View.GONE
-            }
+        }
     }
 
     private fun mapBadgeRes(badgeId: String): Int {
@@ -189,18 +164,6 @@ class FriendProfileFragment : Fragment(R.layout.fragment_friend_profile) {
             "grandmaster" -> R.drawable.ic_badge_grandmaster
             "challenger" -> R.drawable.ic_badge_challenger
             else -> R.drawable.ic_badge_bronze
-        }
-    }
-
-    private fun getBadgeIdByLevel(level: Int): String {
-        return when (level) {
-            in 1..4 -> "bronze"
-            in 5..9 -> "silver"
-            in 10..14 -> "gold"
-            in 15..19 -> "platinum"
-            in 20..29 -> "master"
-            in 30..39 -> "grandmaster"
-            else -> "challenger"
         }
     }
 
@@ -217,11 +180,5 @@ class FriendProfileFragment : Fragment(R.layout.fragment_friend_profile) {
         }
 
         return "$badgeName 뱃지를 가진 Lv.$level 팬 친구예요"
-    }
-
-    override fun onDestroyView() {
-        userListener?.remove()
-        userListener = null
-        super.onDestroyView()
     }
 }

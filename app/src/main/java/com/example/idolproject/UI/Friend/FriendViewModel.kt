@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -28,6 +29,11 @@ class FriendViewModel @Inject constructor(
 
     private val _friendRequestsUiState = MutableStateFlow(FriendRequestsUiState())
     val friendRequestsUiState: StateFlow<FriendRequestsUiState> = _friendRequestsUiState.asStateFlow()
+
+    private val _friendProfileUiState = MutableStateFlow(FriendProfileUiState())
+    val friendProfileUiState: StateFlow<FriendProfileUiState> = _friendProfileUiState.asStateFlow()
+
+    private var friendProfileJob: Job? = null
 
     private val _event = MutableSharedFlow<FriendEvent>()
     val event: SharedFlow<FriendEvent> = _event.asSharedFlow()
@@ -264,6 +270,42 @@ class FriendViewModel @Inject constructor(
         }
     }
 
+    fun startObserveFriendProfile(friendUid: String) {
+        if (friendUid.isBlank()) {
+            _friendProfileUiState.value = FriendProfileUiState(
+                isLoading = false,
+                profile = null,
+                errorMessage = "친구 정보를 찾을 수 없습니다."
+            )
+            return
+        }
+
+        friendProfileJob?.cancel()
+        friendProfileJob = viewModelScope.launch {
+            _friendProfileUiState.value = FriendProfileUiState(
+                isLoading = true,
+                profile = null,
+                errorMessage = null
+            )
+
+            friendRepository.observeFriendProfile(friendUid)
+                .catch { throwable ->
+                    _friendProfileUiState.value = FriendProfileUiState(
+                        isLoading = false,
+                        profile = null,
+                        errorMessage = throwable.message ?: "친구 정보를 불러오지 못했습니다."
+                    )
+                }
+                .collect { profile ->
+                    _friendProfileUiState.value = FriendProfileUiState(
+                        isLoading = false,
+                        profile = profile,
+                        errorMessage = null
+                    )
+                }
+        }
+    }
+
     fun markAllPendingChecked() {
         viewModelScope.launch {
             runCatching {
@@ -301,5 +343,6 @@ class FriendViewModel @Inject constructor(
         friendListJob?.cancel()
         pendingCountJob?.cancel()
         requestsJob?.cancel()
+        friendProfileJob?.cancel()
     }
 }

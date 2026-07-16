@@ -3,16 +3,25 @@ package com.example.idolproject.data.repository
 import com.example.idolproject.UI.Mission.MissionRewardManager
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import javax.inject.Inject
+import kotlinx.coroutines.flow.Flow
+import com.google.firebase.auth.FirebaseAuth
 
 class MissionRepository @Inject constructor() {
 
     private val db = FirebaseFirestore.getInstance()
+    private val auth = FirebaseAuth.getInstance()
+
+    fun getCurrentUserId(): String? {
+        return auth.currentUser?.uid
+    }
 
     suspend fun isTodayAttendanceCompleted(uid: String): Boolean {
         val dateKey = getTodayDateKey()
@@ -249,4 +258,74 @@ class MissionRepository @Inject constructor() {
             Result.failure(e)
         }
     }
+
+    fun observeMissionGrowthProfile(): Flow<MissionGrowthProfile> = callbackFlow {
+        val uid = auth.currentUser?.uid
+
+        if (uid.isNullOrBlank()) {
+            close(IllegalStateException("로그인이 필요합니다."))
+            return@callbackFlow
+        }
+
+        val listener = db.collection("users")
+            .document(uid)
+            .addSnapshotListener { snap, error ->
+                if (error != null) {
+                    close(error)
+                    return@addSnapshotListener
+                }
+
+                if (snap == null || !snap.exists()) {
+                    close(IllegalStateException("사용자 정보를 찾을 수 없습니다."))
+                    return@addSnapshotListener
+                }
+
+                val level = (snap.getLong("level") ?: 1L).toInt()
+                val exp = (snap.getLong("exp") ?: 0L).toInt()
+
+                val needExp = 100
+                val percent = ((exp * 100) / needExp).coerceIn(0, 100)
+
+                val badgeIdFromDb = snap.getString("badgeId").orEmpty()
+                val finalBadgeId = if (badgeIdFromDb.isBlank() || badgeIdFromDb == "default") {
+                    getBadgeIdByLevel(level)
+                } else {
+                    badgeIdFromDb
+                }
+
+                trySend(
+                    MissionGrowthProfile(
+                        level = level,
+                        exp = exp,
+                        needExp = needExp,
+                        expPercent = percent,
+                        badgeId = finalBadgeId
+                    )
+                )
+            }
+
+        awaitClose {
+            listener.remove()
+        }
+    }
+
+    private fun getBadgeIdByLevel(level: Int): String {
+        return when (level) {
+            in 1..4 -> "bronze"
+            in 5..9 -> "silver"
+            in 10..14 -> "gold"
+            in 15..19 -> "platinum"
+            in 20..29 -> "master"
+            in 30..39 -> "grandmaster"
+            else -> "challenger"
+        }
+    }
 }
+
+data class MissionGrowthProfile(
+    val level: Int = 1,
+    val exp: Int = 0,
+    val needExp: Int = 100,
+    val expPercent: Int = 0,
+    val badgeId: String = "bronze"
+)
