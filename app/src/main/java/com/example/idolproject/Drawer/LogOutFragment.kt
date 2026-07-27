@@ -9,6 +9,7 @@ import androidx.lifecycle.lifecycleScope
 import com.example.idolproject.Login.LoginActivity
 import com.example.idolproject.data.repository.AuthRepository
 import com.example.idolproject.data.repository.FcmRepository
+import com.example.idolproject.data.repository.UserSessionRepository
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -21,6 +22,9 @@ class LogOutFragment : Fragment() {
 
     @Inject
     lateinit var fcmRepository: FcmRepository
+
+    @Inject
+    lateinit var userSessionRepository: UserSessionRepository
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -39,6 +43,8 @@ class LogOutFragment : Fragment() {
             fcmRepository.clearCurrentUserFcmToken()
 
             authRepository.logout()
+            userSessionRepository.clearSession()
+
             moveToLogin()
         }
     }

@@ -6,11 +6,17 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.example.idolproject.MainActivity
-import com.example.idolproject.UserSession
+import com.example.idolproject.data.repository.UserSessionRepository
 import com.google.firebase.auth.FirebaseAuth
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
+@AndroidEntryPoint
 class SplashActivity : AppCompatActivity() {
+
+    @Inject
+    lateinit var userSessionRepository: UserSessionRepository
 
     private val auth by lazy { FirebaseAuth.getInstance() }
 
@@ -33,7 +39,7 @@ class SplashActivity : AppCompatActivity() {
 
     private fun syncUserSession() {
         lifecycleScope.launch {
-            val isSuccess = UserSession.syncFromFirestore(this@SplashActivity)
+            val isSuccess = userSessionRepository.syncFromFirestore()
 
             if (isSuccess) {
                 goMain()
@@ -44,16 +50,18 @@ class SplashActivity : AppCompatActivity() {
     }
 
     private fun clearSessionAndGoLogin() {
-        auth.signOut()
-        UserSession.clear(this)
+        lifecycleScope.launch {
+            auth.signOut()
+            userSessionRepository.clearSession()
 
-        Toast.makeText(
-            this,
-            "세션 로딩 실패. 다시 로그인 해주세요.",
-            Toast.LENGTH_SHORT
-        ).show()
+            Toast.makeText(
+                this@SplashActivity,
+                "세션 로딩 실패. 다시 로그인 해주세요.",
+                Toast.LENGTH_SHORT
+            ).show()
 
-        goLogin()
+            goLogin()
+        }
     }
 
     private fun goMain() {
