@@ -6,6 +6,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import com.google.firebase.firestore.SetOptions
+import com.example.idolproject.domain.policy.NicknamePolicy
 
 class AuthRepository @Inject constructor() {
 
@@ -77,10 +78,10 @@ class AuthRepository @Inject constructor() {
     }
 
     suspend fun checkNicknameAvailable(nickname: String): NicknameCheckResult {
-        val key = normalizeNicknameKey(nickname)
+        val key = NicknamePolicy.normalizeNicknameKey(nickname)
 
-        if (!isValidNickname(nickname)) {
-            return NicknameCheckResult.Invalid("닉네임은 2~12자, 공백 없이 입력해줘")
+        if (!NicknamePolicy.isValidNickname(nickname)) {
+            return NicknameCheckResult.Invalid(NicknamePolicy.getInvalidMessage())
         }
 
         return runCatching {
@@ -108,14 +109,14 @@ class AuthRepository @Inject constructor() {
         checkedNicknameKey: String?,
         isNicknameAvailable: Boolean
     ): RegisterResult {
-        val key = normalizeNicknameKey(nickname)
+        val key = NicknamePolicy.normalizeNicknameKey(nickname)
 
         if (email.isBlank() || password.isBlank() || nickname.isBlank()) {
             return RegisterResult.Failed("모든 항목을 입력해 주세요.")
         }
 
-        if (!isValidNickname(nickname)) {
-            return RegisterResult.Failed("닉네임은 2~12자, 공백 없이 입력해줘")
+        if (!NicknamePolicy.isValidNickname(nickname)) {
+            return RegisterResult.Failed(NicknamePolicy.getInvalidMessage())
         }
 
         if (checkedNicknameKey != key || !isNicknameAvailable) {
@@ -204,19 +205,6 @@ class AuthRepository @Inject constructor() {
 
             null
         }.await()
-    }
-
-    fun isValidNickname(nickname: String): Boolean {
-        val n = nickname.trim()
-        if (n.length !in 2..12) return false
-        if (n.contains(" ")) return false
-        return true
-    }
-
-    fun normalizeNicknameKey(nickname: String): String {
-        return nickname.trim()
-            .lowercase()
-            .replace("\\s+".toRegex(), "")
     }
 }
 

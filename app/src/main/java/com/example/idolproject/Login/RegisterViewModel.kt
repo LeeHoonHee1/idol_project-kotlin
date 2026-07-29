@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.idolproject.data.repository.AuthRepository
 import com.example.idolproject.data.repository.NicknameCheckResult
 import com.example.idolproject.data.repository.RegisterResult
+import com.example.idolproject.domain.policy.NicknamePolicy
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -155,7 +156,7 @@ class RegisterViewModel @Inject constructor(
                     val canRetryRegister =
                         _uiState.value.isNicknameAvailable &&
                                 _uiState.value.checkedNicknameKey ==
-                                authRepository.normalizeNicknameKey(nickname)
+                                NicknamePolicy.normalizeNicknameKey(nickname)
 
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
