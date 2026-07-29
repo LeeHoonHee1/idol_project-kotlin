@@ -5,6 +5,7 @@ import com.example.idolproject.Drawer.Event.EventStatus
 import com.example.idolproject.data.local.dao.EventDao
 import com.example.idolproject.data.mapper.toEventEntity
 import com.example.idolproject.data.mapper.toEventItem
+import com.example.idolproject.data.remote.api.EventApiService
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
@@ -12,7 +13,8 @@ import javax.inject.Singleton
 
 @Singleton
 class EventRepository @Inject constructor(
-    private val eventDao: EventDao
+    private val eventDao: EventDao,
+    private val eventApiService: EventApiService
 ) {
 
     fun observeEvents(): Flow<List<EventItem>> {
@@ -22,6 +24,20 @@ class EventRepository @Inject constructor(
                     entity.toEventItem()
                 }
             }
+    }
+
+    suspend fun refreshEvents() {
+        val eventEntities = runCatching {
+            eventApiService.getEvents().map { dto ->
+                dto.toEventEntity()
+            }
+        }.getOrElse {
+            sampleEvents().map { event ->
+                event.toEventEntity()
+            }
+        }
+
+        eventDao.upsertEvents(eventEntities)
     }
 
     suspend fun seedSampleEventsIfNeeded() {

@@ -51,16 +51,16 @@ class EventViewModel @Inject constructor(
             )
 
     init {
-        seedSampleEvents()
+        refreshEvents()
     }
 
     fun selectFilter(filter: EventFilter) {
         selectedFilter.value = filter
     }
 
-    private fun seedSampleEvents() {
+    private fun refreshEvents() {
         viewModelScope.launch {
-            eventRepository.seedSampleEventsIfNeeded()
+            eventRepository.refreshEvents()
         }
     }
 }
