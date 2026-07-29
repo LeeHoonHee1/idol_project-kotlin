@@ -14,7 +14,7 @@ import androidx.fragment.app.Fragment
 import com.example.idolproject.Drawer.ComeBack.ComeBackFragment
 import com.example.idolproject.Drawer.Community.CommunityFragment
 import com.example.idolproject.Drawer.CustomerFragment
-import com.example.idolproject.Drawer.EventFragment
+import com.example.idolproject.Drawer.Event.EventFragment
 import com.example.idolproject.Drawer.Group.GroupFragment
 import com.example.idolproject.UI.Friend.FriendFragment
 import com.example.idolproject.UI.Home.HomeFragment

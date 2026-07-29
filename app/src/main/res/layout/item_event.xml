@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/card_event_item"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="12dp"
+    app:cardBackgroundColor="#FFFFFF"
+    app:cardCornerRadius="20dp"
+    app:cardElevation="0dp"
+    app:strokeColor="#ECE4FF"
+    app:strokeWidth="1dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/tv_event_status"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_event_status_active"
+                android:paddingStart="10dp"
+                android:paddingTop="4dp"
+                android:paddingEnd="10dp"
+                android:paddingBottom="4dp"
+                android:textColor="#6A4CC2"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                tools:text="진행중" />
+
+            <TextView
+                android:id="@+id/tv_event_reward"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:textColor="#9A90AA"
+                android:textSize="12sp"
+                tools:text="EXP +50" />
+
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/tv_event_item_title"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:textColor="#2D2440"
+            android:textSize="17sp"
+            android:textStyle="bold"
+            tools:text="6월 출석 이벤트" />
+
+        <TextView
+            android:id="@+id/tv_event_item_desc"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:lineSpacingExtra="3dp"
+            android:textColor="#6F657D"
+            android:textSize="14sp"
+            tools:text="7일 연속 출석하면 보너스 EXP를 받을 수 있어요." />
+
+        <TextView
+            android:id="@+id/tv_event_period"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:textColor="#9A90AA"
+            android:textSize="13sp"
+            tools:text="2026.06.01 ~ 2026.06.30" />
+
+    </LinearLayout>
+</com.google.android.material.card.MaterialCardView>
