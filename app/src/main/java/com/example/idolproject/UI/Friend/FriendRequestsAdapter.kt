@@ -9,6 +9,7 @@ import androidx.recyclerview.widget.RecyclerView
 import coil.load
 import com.example.idolproject.R
 import com.google.android.material.button.MaterialButton
+import com.example.idolproject.domain.policy.BadgePolicy
 
 data class FriendRequestItem(
     val senderUid: String,
@@ -96,11 +97,10 @@ class FriendRequestsAdapter(
     override fun getItemCount(): Int = items.size
 
     private fun mapBadgeRes(badgeId: String, level: Int): Int {
-        val finalBadgeId = if (badgeId.isBlank() || badgeId == "default") {
-            getBadgeIdByLevel(level)
-        } else {
-            badgeId
-        }
+        val finalBadgeId = BadgePolicy.resolveBadgeId(
+            level = level,
+            badgeIdFromDb = badgeId
+        )
 
         return when (finalBadgeId) {
             "bronze" -> R.drawable.ic_badge_bronze
@@ -111,18 +111,6 @@ class FriendRequestsAdapter(
             "grandmaster" -> R.drawable.ic_badge_grandmaster
             "challenger" -> R.drawable.ic_badge_challenger
             else -> R.drawable.ic_badge_bronze
-        }
-    }
-
-    private fun getBadgeIdByLevel(level: Int): String {
-        return when (level) {
-            in 1..4 -> "bronze"
-            in 5..9 -> "silver"
-            in 10..14 -> "gold"
-            in 15..19 -> "platinum"
-            in 20..29 -> "master"
-            in 30..39 -> "grandmaster"
-            else -> "challenger"
         }
     }
 }

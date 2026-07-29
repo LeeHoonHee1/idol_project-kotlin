@@ -6,6 +6,7 @@ import com.example.idolproject.UI.Friend.FriendRequestItem
 import com.example.idolproject.UI.Friend.FriendRequestStatus
 import com.example.idolproject.UI.Friend.NicknameKeyUtil
 import com.example.idolproject.UI.Friend.SendResult
+import com.example.idolproject.domain.policy.BadgePolicy
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FieldValue
@@ -361,11 +362,10 @@ class FriendRepository @Inject constructor() {
     ): Friend {
         val level = (getLong("level") ?: 1L).toInt()
         val badgeIdFromDb = getString("badgeId").orEmpty()
-        val finalBadgeId = if (badgeIdFromDb.isBlank() || badgeIdFromDb == "default") {
-            getBadgeIdByLevel(level)
-        } else {
-            badgeIdFromDb
-        }
+        val finalBadgeId = BadgePolicy.resolveBadgeId(
+            level = level,
+            badgeIdFromDb = badgeIdFromDb
+        )
 
         val favoriteGroupId = getString("favoriteGroupId").orEmpty()
         val favoriteGroupName = if (favoriteGroupId.isBlank()) {
@@ -394,11 +394,10 @@ class FriendRepository @Inject constructor() {
     ): FriendRequestItem {
         val level = (getLong("level") ?: 1L).toInt()
         val badgeIdFromDb = getString("badgeId").orEmpty()
-        val finalBadgeId = if (badgeIdFromDb.isBlank() || badgeIdFromDb == "default") {
-            getBadgeIdByLevel(level)
-        } else {
-            badgeIdFromDb
-        }
+        val finalBadgeId = BadgePolicy.resolveBadgeId(
+            level = level,
+            badgeIdFromDb = badgeIdFromDb
+        )
 
         val favoriteGroupId = getString("favoriteGroupId").orEmpty()
         val favoriteGroupName = if (favoriteGroupId.isBlank()) {
@@ -431,11 +430,10 @@ class FriendRepository @Inject constructor() {
     ): FriendSearchProfile {
         val level = (getLong("level") ?: 1L).toInt()
         val badgeIdFromDb = getString("badgeId").orEmpty()
-        val finalBadgeId = if (badgeIdFromDb.isBlank() || badgeIdFromDb == "default") {
-            getBadgeIdByLevel(level)
-        } else {
-            badgeIdFromDb
-        }
+        val finalBadgeId = BadgePolicy.resolveBadgeId(
+            level = level,
+            badgeIdFromDb = badgeIdFromDb
+        )
 
         val favoriteGroupId = getString("favoriteGroupId").orEmpty()
         val favoriteGroupName = if (favoriteGroupId.isBlank()) {
@@ -461,18 +459,6 @@ class FriendRepository @Inject constructor() {
             hasPendingRequest = hasPendingRequest,
             hasReceivedPendingRequest = hasReceivedPendingRequest
         )
-    }
-
-    private fun getBadgeIdByLevel(level: Int): String {
-        return when (level) {
-            in 1..4 -> "bronze"
-            in 5..9 -> "silver"
-            in 10..14 -> "gold"
-            in 15..19 -> "platinum"
-            in 20..29 -> "master"
-            in 30..39 -> "grandmaster"
-            else -> "challenger"
-        }
     }
 
     private fun Flow<List<String>>.flatMapFriendProfiles(
@@ -511,11 +497,10 @@ class FriendRepository @Inject constructor() {
                 } else {
                     val level = (userSnap.getLong("level") ?: 1L).toInt()
                     val badgeIdFromDb = userSnap.getString("badgeId").orEmpty()
-                    val finalBadgeId = if (badgeIdFromDb.isBlank() || badgeIdFromDb == "default") {
-                        getBadgeIdByLevelForFriendRepository(level)
-                    } else {
-                        badgeIdFromDb
-                    }
+                    val finalBadgeId = BadgePolicy.resolveBadgeId(
+                        level = level,
+                        badgeIdFromDb = badgeIdFromDb
+                    )
 
                     val favoriteGroupId = userSnap.getString("favoriteGroupId").orEmpty()
                     val favoriteGroupName = if (favoriteGroupId.isBlank()) {
@@ -586,11 +571,10 @@ class FriendRepository @Inject constructor() {
                 } else {
                     val level = (userSnap.getLong("level") ?: 1L).toInt()
                     val badgeIdFromDb = userSnap.getString("badgeId").orEmpty()
-                    val finalBadgeId = if (badgeIdFromDb.isBlank() || badgeIdFromDb == "default") {
-                        getBadgeIdByLevelForFriendRepository(level)
-                    } else {
-                        badgeIdFromDb
-                    }
+                    val finalBadgeId = BadgePolicy.resolveBadgeId(
+                        level = level,
+                        badgeIdFromDb = badgeIdFromDb
+                    )
 
                     val favoriteGroupId = userSnap.getString("favoriteGroupId").orEmpty()
                     val favoriteGroupName = if (favoriteGroupId.isBlank()) {
@@ -623,18 +607,6 @@ class FriendRepository @Inject constructor() {
         }
 
         awaitClose { }
-    }
-
-    private fun getBadgeIdByLevelForFriendRepository(level: Int): String {
-        return when (level) {
-            in 1..4 -> "bronze"
-            in 5..9 -> "silver"
-            in 10..14 -> "gold"
-            in 15..19 -> "platinum"
-            in 20..29 -> "master"
-            in 30..39 -> "grandmaster"
-            else -> "challenger"
-        }
     }
 
     fun observeFriendProfile(friendUid: String): Flow<FriendProfile> = callbackFlow {
@@ -695,11 +667,10 @@ class FriendRepository @Inject constructor() {
 
         val level = (getLong("level") ?: 1L).toInt()
         val badgeIdFromDb = getString("badgeId").orEmpty()
-        val finalBadgeId = if (badgeIdFromDb.isBlank() || badgeIdFromDb == "default") {
-            getBadgeIdByLevel(level)
-        } else {
-            badgeIdFromDb
-        }
+        val finalBadgeId = BadgePolicy.resolveBadgeId(
+            level = level,
+            badgeIdFromDb = badgeIdFromDb
+        )
 
         val favoriteGroupId = getString("favoriteGroupId").orEmpty()
         val photoUrl = getString("photoUrl")

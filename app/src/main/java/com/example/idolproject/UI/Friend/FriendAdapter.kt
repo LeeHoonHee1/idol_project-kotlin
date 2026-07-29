@@ -9,6 +9,7 @@ import android.widget.PopupMenu
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.example.idolproject.R
+import com.example.idolproject.domain.policy.BadgePolicy
 
 class FriendAdapter(
     private val items: MutableList<Friend> = mutableListOf(),
@@ -88,11 +89,10 @@ class FriendAdapter(
     override fun getItemCount(): Int = items.size
 
     private fun mapBadgeRes(badgeId: String, level: Int): Int {
-        val finalBadgeId = if (badgeId.isBlank() || badgeId == "default") {
-            getBadgeIdByLevel(level)
-        } else {
-            badgeId
-        }
+        val finalBadgeId = BadgePolicy.resolveBadgeId(
+            level = level,
+            badgeIdFromDb = badgeId
+        )
 
         return when (finalBadgeId) {
             "bronze" -> R.drawable.ic_badge_bronze
@@ -103,18 +103,6 @@ class FriendAdapter(
             "grandmaster" -> R.drawable.ic_badge_grandmaster
             "challenger" -> R.drawable.ic_badge_challenger
             else -> R.drawable.ic_badge_bronze
-        }
-    }
-
-    private fun getBadgeIdByLevel(level: Int): String {
-        return when (level) {
-            in 1..4 -> "bronze"
-            in 5..9 -> "silver"
-            in 10..14 -> "gold"
-            in 15..19 -> "platinum"
-            in 20..29 -> "master"
-            in 30..39 -> "grandmaster"
-            else -> "challenger"
         }
     }
 

@@ -6,6 +6,7 @@ import com.example.idolproject.R
 import com.example.idolproject.data.repository.FavoriteGroupSaveResult
 import com.example.idolproject.data.repository.MyPageRepository
 import com.example.idolproject.data.repository.NicknameChangeResult
+import com.example.idolproject.domain.policy.BadgePolicy
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -50,7 +51,7 @@ class MyPageViewModel @Inject constructor(
         profileJob = viewModelScope.launch {
             myPageRepository.observeMyProfile(uid)
                 .collect { profile ->
-                    val correctBadgeId = getBadgeIdByLevel(profile.level)
+                    val correctBadgeId = BadgePolicy.getBadgeIdByLevel(profile.level)
 
                     myPageRepository.syncBadgeIdIfNeeded(
                         uid = uid,
@@ -171,18 +172,6 @@ class MyPageViewModel @Inject constructor(
 
     private fun normalizeNicknameKey(nickname: String): String {
         return nickname.lowercase().replace("\\s".toRegex(), "")
-    }
-
-    private fun getBadgeIdByLevel(level: Int): String {
-        return when (level) {
-            in 1..4 -> "bronze"
-            in 5..9 -> "silver"
-            in 10..14 -> "gold"
-            in 15..19 -> "platinum"
-            in 20..29 -> "master"
-            in 30..39 -> "grandmaster"
-            else -> "challenger"
-        }
     }
 
     private fun getBadgeImageRes(badgeId: String): Int {

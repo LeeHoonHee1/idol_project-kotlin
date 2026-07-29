@@ -313,18 +313,6 @@ class MyPageFragment : Fragment(R.layout.fragment_mypage) {
         }
     }
 
-    private fun getBadgeIdByLevel(level: Int): String {
-        return when (level) {
-            in 1..4 -> "bronze"
-            in 5..9 -> "silver"
-            in 10..14 -> "gold"
-            in 15..19 -> "platinum"
-            in 20..29 -> "master"
-            in 30..39 -> "grandmaster"
-            else -> "challenger"
-        }
-    }
-
     // -----------------------------
     // Nickname change dialog + transaction
     // -----------------------------

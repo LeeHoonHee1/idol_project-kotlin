@@ -10,6 +10,7 @@ import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.example.idolproject.domain.policy.BadgePolicy
 import coil.load
 import com.example.idolproject.R
 import dagger.hilt.android.AndroidEntryPoint
@@ -262,11 +263,10 @@ class UserRankingFragment : Fragment() {
     }
 
     private fun mapBadgeRes(badgeId: String, level: Long): Int {
-        val finalBadgeId = if (badgeId.isBlank() || badgeId == "default") {
-            getBadgeIdByLevel(level)
-        } else {
-            badgeId
-        }
+        val finalBadgeId = BadgePolicy.resolveBadgeId(
+            level = level.toInt(),
+            badgeIdFromDb = badgeId
+        )
 
         return when (finalBadgeId) {
             "bronze" -> R.drawable.ic_badge_bronze
@@ -277,18 +277,6 @@ class UserRankingFragment : Fragment() {
             "grandmaster" -> R.drawable.ic_badge_grandmaster
             "challenger" -> R.drawable.ic_badge_challenger
             else -> R.drawable.ic_badge_bronze
-        }
-    }
-
-    private fun getBadgeIdByLevel(level: Long): String {
-        return when (level) {
-            in 1L..4L -> "bronze"
-            in 5L..9L -> "silver"
-            in 10L..14L -> "gold"
-            in 15L..19L -> "platinum"
-            in 20L..29L -> "master"
-            in 30L..39L -> "grandmaster"
-            else -> "challenger"
         }
     }
 }

@@ -1,5 +1,7 @@
 package com.example.idolproject.UI.Mission
 
+import com.example.idolproject.domain.policy.BadgePolicy
+
 object MissionRewardManager {
 
     const val NEED_EXP_PER_LEVEL = 100
@@ -28,7 +30,7 @@ object MissionRewardManager {
             leveledUp = true
         }
 
-        val badgeId = getBadgeIdByLevel(level)
+        val badgeId = BadgePolicy.getBadgeIdByLevel(level)
 
         return RewardResult(
             newLevel = level,
@@ -36,17 +38,5 @@ object MissionRewardManager {
             newBadgeId = badgeId,
             leveledUp = leveledUp
         )
-    }
-
-    fun getBadgeIdByLevel(level: Int): String {
-        return when (level) {
-            in 1..4 -> "bronze"
-            in 5..9 -> "silver"
-            in 10..14 -> "gold"
-            in 15..19 -> "platinum"
-            in 20..29 -> "master"
-            in 30..39 -> "grandmaster"
-            else -> "challenger"
-        }
     }
 }

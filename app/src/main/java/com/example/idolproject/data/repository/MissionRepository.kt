@@ -1,6 +1,7 @@
 package com.example.idolproject.data.repository
 
 import com.example.idolproject.UI.Mission.MissionRewardManager
+import com.example.idolproject.domain.policy.BadgePolicy
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.channels.awaitClose
@@ -287,11 +288,10 @@ class MissionRepository @Inject constructor() {
                 val percent = ((exp * 100) / needExp).coerceIn(0, 100)
 
                 val badgeIdFromDb = snap.getString("badgeId").orEmpty()
-                val finalBadgeId = if (badgeIdFromDb.isBlank() || badgeIdFromDb == "default") {
-                    getBadgeIdByLevel(level)
-                } else {
-                    badgeIdFromDb
-                }
+                val finalBadgeId = BadgePolicy.resolveBadgeId(
+                    level = level,
+                    badgeIdFromDb = badgeIdFromDb
+                )
 
                 trySend(
                     MissionGrowthProfile(
@@ -306,18 +306,6 @@ class MissionRepository @Inject constructor() {
 
         awaitClose {
             listener.remove()
-        }
-    }
-
-    private fun getBadgeIdByLevel(level: Int): String {
-        return when (level) {
-            in 1..4 -> "bronze"
-            in 5..9 -> "silver"
-            in 10..14 -> "gold"
-            in 15..19 -> "platinum"
-            in 20..29 -> "master"
-            in 30..39 -> "grandmaster"
-            else -> "challenger"
         }
     }
 }
