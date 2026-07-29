@@ -4,7 +4,8 @@ sealed interface EventUiState {
     data object Loading : EventUiState
 
     data class Success(
-        val events: List<EventItem>
+        val events: List<EventItem>,
+        val message: String = "최신 이벤트를 확인했어요"
     ) : EventUiState
 
     data class Empty(

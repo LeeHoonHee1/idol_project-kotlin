@@ -15,6 +15,7 @@ import com.example.idolproject.R
 import com.google.android.material.button.MaterialButton
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
+import android.widget.ProgressBar
 
 @AndroidEntryPoint
 class EventFragment : Fragment(R.layout.fragment_event) {
@@ -29,6 +30,10 @@ class EventFragment : Fragment(R.layout.fragment_event) {
     private lateinit var btnAll: MaterialButton
     private lateinit var btnActive: MaterialButton
     private lateinit var btnFinished: MaterialButton
+
+    private lateinit var progressLoading: ProgressBar
+    private lateinit var tvStatusMessage: TextView
+    private lateinit var btnRefresh: MaterialButton
 
     override fun onViewCreated(
         view: View,
@@ -49,6 +54,10 @@ class EventFragment : Fragment(R.layout.fragment_event) {
         btnAll = view.findViewById(R.id.btn_event_all)
         btnActive = view.findViewById(R.id.btn_event_active)
         btnFinished = view.findViewById(R.id.btn_event_finished)
+
+        progressLoading = view.findViewById(R.id.progress_event_loading)
+        tvStatusMessage = view.findViewById(R.id.tv_event_status_message)
+        btnRefresh = view.findViewById(R.id.btn_event_refresh)
     }
 
     private fun setupRecyclerView() {
@@ -73,6 +82,10 @@ class EventFragment : Fragment(R.layout.fragment_event) {
         btnFinished.setOnClickListener {
             viewModel.selectFilter(EventFilter.FINISHED)
         }
+
+        btnRefresh.setOnClickListener {
+            viewModel.refreshEvents()
+        }
     }
 
     private fun observeUiState() {
@@ -88,17 +101,23 @@ class EventFragment : Fragment(R.layout.fragment_event) {
     private fun bindUiState(uiState: EventUiState) {
         when (uiState) {
             EventUiState.Loading -> {
+                progressLoading.visibility = View.VISIBLE
+                tvStatusMessage.text = "이벤트를 불러오는 중이에요"
                 rvEvents.visibility = View.GONE
                 tvEmpty.visibility = View.GONE
             }
 
             is EventUiState.Success -> {
+                progressLoading.visibility = View.GONE
+                tvStatusMessage.text = uiState.message
                 eventAdapter.submitList(uiState.events)
                 rvEvents.visibility = View.VISIBLE
                 tvEmpty.visibility = View.GONE
             }
 
             is EventUiState.Empty -> {
+                progressLoading.visibility = View.GONE
+                tvStatusMessage.text = uiState.message
                 eventAdapter.submitList(emptyList())
                 rvEvents.visibility = View.GONE
                 tvEmpty.visibility = View.VISIBLE
@@ -106,6 +125,8 @@ class EventFragment : Fragment(R.layout.fragment_event) {
             }
 
             is EventUiState.Error -> {
+                progressLoading.visibility = View.GONE
+                tvStatusMessage.text = "이벤트를 불러오지 못했어요"
                 eventAdapter.submitList(emptyList())
                 rvEvents.visibility = View.GONE
                 tvEmpty.visibility = View.VISIBLE

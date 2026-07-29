@@ -26,24 +26,24 @@ class EventRepository @Inject constructor(
             }
     }
 
-    suspend fun refreshEvents() {
-        val eventEntities = runCatching {
-            eventApiService.getEvents().map { dto ->
+    suspend fun refreshEvents(): EventRefreshResult {
+        return runCatching {
+            val eventEntities = eventApiService.getEvents().map { dto ->
                 dto.toEventEntity()
             }
+
+            eventDao.upsertEvents(eventEntities)
+
+            EventRefreshResult.Success
         }.getOrElse {
-            sampleEvents().map { event ->
+            val fallbackEvents = sampleEvents().map { event ->
                 event.toEventEntity()
             }
+
+            eventDao.upsertEvents(fallbackEvents)
+
+            EventRefreshResult.Fallback
         }
-
-        eventDao.upsertEvents(eventEntities)
-    }
-
-    suspend fun seedSampleEventsIfNeeded() {
-        eventDao.upsertEvents(sampleEvents().map { event ->
-            event.toEventEntity()
-        })
     }
 
     private fun sampleEvents(): List<EventItem> {
@@ -77,4 +77,9 @@ class EventRepository @Inject constructor(
             )
         )
     }
+}
+
+sealed interface EventRefreshResult {
+    data object Success : EventRefreshResult
+    data object Fallback : EventRefreshResult
 }

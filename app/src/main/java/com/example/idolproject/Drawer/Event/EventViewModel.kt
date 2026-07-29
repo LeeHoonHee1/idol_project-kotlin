@@ -2,6 +2,7 @@ package com.example.idolproject.Drawer.Event
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.idolproject.data.repository.EventRefreshResult
 import com.example.idolproject.data.repository.EventRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,12 +20,14 @@ class EventViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val selectedFilter = MutableStateFlow(EventFilter.ALL)
+    private val statusMessage = MutableStateFlow("이벤트를 불러오는 중이에요")
 
     val uiState: StateFlow<EventUiState> =
         combine(
             eventRepository.observeEvents(),
-            selectedFilter
-        ) { events, filter ->
+            selectedFilter,
+            statusMessage
+        ) { events, filter, message ->
             val filteredEvents = when (filter) {
                 EventFilter.ALL -> events
                 EventFilter.ACTIVE -> events.filter { it.status == EventStatus.ACTIVE }
@@ -34,7 +37,10 @@ class EventViewModel @Inject constructor(
             if (filteredEvents.isEmpty()) {
                 EventUiState.Empty()
             } else {
-                EventUiState.Success(filteredEvents)
+                EventUiState.Success(
+                    events = filteredEvents,
+                    message = message
+                )
             }
         }
             .catch { throwable ->
@@ -58,9 +64,16 @@ class EventViewModel @Inject constructor(
         selectedFilter.value = filter
     }
 
-    private fun refreshEvents() {
+    fun refreshEvents() {
         viewModelScope.launch {
-            eventRepository.refreshEvents()
+            statusMessage.value = "이벤트를 불러오는 중이에요"
+
+            val result = eventRepository.refreshEvents()
+
+            statusMessage.value = when (result) {
+                EventRefreshResult.Success -> "최신 이벤트를 확인했어요"
+                EventRefreshResult.Fallback -> "네트워크 연결이 불안정해 샘플/캐시 이벤트를 표시 중이에요"
+            }
         }
     }
 }
