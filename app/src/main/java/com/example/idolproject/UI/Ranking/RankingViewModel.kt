@@ -3,6 +3,7 @@ package com.example.idolproject.UI.Ranking
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.idolproject.data.repository.RankingRepository
+import com.example.idolproject.domain.policy.RankingPolicy
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -19,19 +20,17 @@ class RankingViewModel @Inject constructor(
     val userRankingUiState: StateFlow<UserRankingUiState> =
         rankingRepository.observeUserRanking()
             .map { users ->
-                val top3 = users.take(3)
-                val others = users.drop(3)
-
                 val currentUserId = rankingRepository.getCurrentUserId()
-                val myIndex = users.indexOfFirst { it.uid == currentUserId }
-                val myRank = if (myIndex >= 0) myIndex + 1 else null
-                val myUser = if (myIndex >= 0) users[myIndex] else null
+                val rankingResult = RankingPolicy.buildUserRanking(
+                    users = users,
+                    currentUserId = currentUserId
+                )
 
                 val state: UserRankingUiState = UserRankingUiState.Success(
-                    top3 = top3,
-                    others = others,
-                    myRank = myRank,
-                    myUser = myUser
+                    top3 = rankingResult.top3,
+                    others = rankingResult.others,
+                    myRank = rankingResult.myRank,
+                    myUser = rankingResult.myUser
                 )
 
                 state
