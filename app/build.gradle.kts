@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.hilt.android)
     kotlin("kapt")
     id("com.google.gms.google-services")
+    alias(libs.plugins.compose.compiler)
 }
 
 android {
@@ -24,6 +25,7 @@ android {
 
     buildFeatures {
         viewBinding = true
+        compose = true
     }
 
     buildTypes {
@@ -86,6 +88,14 @@ dependencies {
     implementation(libs.retrofit.core)
     implementation(libs.retrofit.converter.gson)
     implementation(libs.okhttp.logging.interceptor)
+
+    implementation(platform(libs.androidx.compose.bom))
+    implementation(libs.androidx.compose.ui)
+    implementation(libs.androidx.compose.ui.tooling.preview)
+    implementation(libs.androidx.compose.material3)
+    implementation(libs.androidx.activity.compose)
+
+    debugImplementation(libs.androidx.compose.ui.tooling)
 
 }
 

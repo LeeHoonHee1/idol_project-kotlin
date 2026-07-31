@@ -16,6 +16,7 @@ import com.example.idolproject.Drawer.Community.CommunityFragment
 import com.example.idolproject.Drawer.CustomerFragment
 import com.example.idolproject.Drawer.Event.EventFragment
 import com.example.idolproject.Drawer.Group.GroupFragment
+import com.example.idolproject.Drawer.Setting.SettingFragment
 import com.example.idolproject.UI.Friend.FriendFragment
 import com.example.idolproject.UI.Home.HomeFragment
 import com.example.idolproject.UI.Mission.MissionFragment
@@ -151,6 +152,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         requestNotificationPermissionIfNeeded()
         updateCurrentFcmToken()
         handleChatIntent(intent)
+        setupDrawerHeader()
     }
 
     // ⭐ 드로어 전환 (예시 1개)
@@ -178,6 +180,19 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
         drawerLayout.closeDrawer(GravityCompat.START)
         return true
+    }
+
+    private fun setupDrawerHeader() {
+        val headerView = navigationView.getHeaderView(0)
+        val btnHeaderSetting = headerView.findViewById<ImageButton>(R.id.btn_header_setting)
+
+        btnHeaderSetting.setOnClickListener {
+            supportFragmentManager.beginTransaction()
+                .replace(R.id.fragment_container, SettingFragment())
+                .commit()
+
+            drawerLayout.closeDrawers()
+        }
     }
 
     // 공통 프래그먼트 교체 함수
